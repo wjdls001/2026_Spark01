@@ -352,4 +352,41 @@ colors: {
 
 ---
 
-*분석 기준: `디자인_스타일.png` (브랜드 가이드) + `홈.png` (홈 화면 실제 구현)*
+---
+
+## 추가 컴포넌트 (와이어프레임 반영 — 2026-06-17)
+
+### 활동 링 (ActivityRing)
+홈 화면 "이번 주 운동 목표" 카드에서 사용. SVG 원형 링 3개 (운동 횟수/칼로리/거리).
+
+```tsx
+<ActivityRing label="운동 횟수" value={3} unit="회" color="#9B8FFF" pct={60} />
+<ActivityRing label="칼로리" value={770} unit="kcal" color="#C8FF3E" pct={51} />
+<ActivityRing label="거리" value={13.3} unit="km" color="#FF8FA3" pct={67} />
+```
+
+### 지도 (MapView)
+`src/features/map/MapView.tsx` — Leaflet + OpenStreetMap (API 키 불필요).
+
+```tsx
+<MapView
+  center={[37.5283, 126.9342]}
+  zoom={13}
+  pins={[{ id, lat, lng, label, onClick }]}
+  height="240px"
+/>
+```
+
+- 번개 핀: 네온 다이아몬드 형태 (`#C8FF3E` 배경, ⚡ 텍스트)
+- 내 위치 핀: `#9B8FFF` 원형
+- Leaflet CSS는 `globals.css`에서 import
+
+### 자주 하는 운동 (SportIconRow)
+홈 화면 라이트 구역에 표시. sport code → emoji 매핑은 `SPORT_EMOJI` 객체에서 관리.
+
+### 알림 드롭다운 (NotificationDropdown)
+헤더 벨 아이콘 클릭 시 표시. 읽지 않은 알림은 `#F8F6FF` 배경 + `#9B8FFF` 닷.
+
+---
+
+*분석 기준: `디자인_스타일.png` (브랜드 가이드) + `홈.png` (홈 화면 실제 구현) + 와이어프레임 6종 (2026-06-17)*

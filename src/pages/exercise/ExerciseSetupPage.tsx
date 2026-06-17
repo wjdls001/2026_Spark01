@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { fetchSports } from '@/features/exercise/api'
+import { MOCK_SPORTS, SPORT_EMOJI } from '@/lib/mockData'
 import type { Sport } from '@/types/database'
 
 const GOAL_OPTIONS = [
@@ -22,7 +23,12 @@ export function ExerciseSetupPage() {
   const [goalValue, setGoalValue] = useState('')
 
   useEffect(() => {
-    fetchSports().then(({ data }) => { if (data) setSports(data) })
+    fetchSports()
+      .then(({ data }) => {
+        if (data && data.length > 0) setSports(data)
+        else setSports(MOCK_SPORTS as unknown as Sport[])
+      })
+      .catch(() => setSports(MOCK_SPORTS as unknown as Sport[]))
   }, [])
 
   function handleStart() {
@@ -53,19 +59,24 @@ export function ExerciseSetupPage() {
         <div className="mb-6">
           <h2 className="mb-3 text-sm font-bold text-[#111111]">종목 선택</h2>
           <div className="flex flex-wrap gap-2">
-            {sports.map(sport => (
-              <button
-                key={sport.id}
-                onClick={() => setSelectedSport(sport)}
-                className={`rounded-full border px-4 py-2 text-sm font-medium transition-colors ${
-                  selectedSport?.id === sport.id
-                    ? 'border-[#9B8FFF] bg-[#9B8FFF] text-white'
-                    : 'border-gray-300 bg-white text-[#333333]'
-                }`}
-              >
-                {sport.name}
-              </button>
-            ))}
+            {sports.map(sport => {
+              const code = (sport as { code?: string }).code ?? ''
+              const emoji = SPORT_EMOJI[code] ?? '🏃'
+              return (
+                <button
+                  key={sport.id}
+                  onClick={() => setSelectedSport(sport)}
+                  className={`flex items-center gap-1.5 rounded-full border px-4 py-2 text-sm font-medium transition-colors ${
+                    selectedSport?.id === sport.id
+                      ? 'border-[#9B8FFF] bg-[#9B8FFF] text-white'
+                      : 'border-gray-200 bg-white text-[#333333]'
+                  }`}
+                >
+                  <span>{emoji}</span>
+                  <span>{sport.name}</span>
+                </button>
+              )
+            })}
           </div>
         </div>
 

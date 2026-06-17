@@ -3,7 +3,25 @@
 > Supabase 프로젝트: `atsblkfxsawvhqrtmlfc`  
 > 스키마: `public`  
 > 최종 동기화: 2026-06-16  
+> 업데이트: 2026-06-17 (와이어프레임 반영 — 더미 데이터, 지도 좌표 활용)  
 > 원본: Supabase MCP 실제 조회 결과 기준
+
+## 더미 데이터 레이어
+
+Supabase 연결 전 또는 데이터가 없을 때 사용하는 더미 데이터는 `src/lib/mockData.ts`에서 관리한다.
+
+- `MOCK_SPORTS`: 10개 운동 종목 (emoji 포함)
+- `MOCK_PROFILES`: 3개 샘플 프로필
+- `MOCK_SPARKS`: 5개 번개 모임 (위도/경도 포함, 지도 표시 가능)
+- `MOCK_EXERCISE_SESSIONS`: 3개 운동 기록
+- `MOCK_CHALLENGES`: 6개 챌린지 (운동/번개/이벤트 타입)
+- `MOCK_NOTIFICATIONS`: 5개 알림
+- `MOCK_USER_PROFILE`: 현재 로그인 사용자 프로필 기본값
+- `SPORT_EMOJI`: 종목 코드 → emoji 매핑
+
+각 페이지에서 Supabase 쿼리가 빈 결과를 반환하거나 에러가 발생하면 자동으로 더미 데이터로 폴백한다.
+
+---
 
 ---
 

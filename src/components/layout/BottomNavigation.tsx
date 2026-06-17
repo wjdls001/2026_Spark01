@@ -2,10 +2,10 @@ import { NavLink } from 'react-router-dom'
 
 const tabs = [
   { to: '/home', label: '홈', icon: HomeIcon },
-  { to: '/exercise', label: '운동 시작', icon: ExerciseIcon },
-  { to: '/sparks', label: '번개 모임', icon: SparkIcon },
+  { to: '/exercise', label: '운동', icon: ExerciseIcon },
+  { to: '/sparks', label: '모임', icon: SparkIcon },
   { to: '/challenges', label: '챌린지', icon: ChallengeIcon },
-  { to: '/mypage', label: '마이페이지', icon: UserIcon },
+  { to: '/mypage', label: '프로필', icon: UserIcon },
 ]
 
 export function BottomNavigation() {
