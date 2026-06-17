@@ -31,7 +31,7 @@ export function OnboardingTermsPage() {
     if (!user) return
     setLoading(true)
     await saveTermsAgreements(user.id)
-    navigate('/onboarding/profile', { replace: true })
+    navigate('/onboarding/phone', { replace: true })
     setLoading(false)
   }
 

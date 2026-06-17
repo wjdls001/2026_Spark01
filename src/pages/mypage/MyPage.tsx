@@ -2,16 +2,23 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/features/auth/useAuth'
 import { fetchProfile } from '@/features/mypage/api'
-import { fetchWeeklyExerciseSessions } from '@/features/exercise/api'
+import { fetchWeeklyExerciseSessions, formatDuration } from '@/features/exercise/api'
+import { fetchMyParticipations, fetchMySparks } from '@/features/sparks/api'
 import { MOCK_USER_PROFILE, MOCK_SPORTS } from '@/lib/mockData'
 import type { Profile } from '@/types/database'
 import { supabase } from '@/lib/supabase/client'
 
+type Tab = 'profile' | 'workout' | 'activity'
+
 export function MyPage() {
   const navigate = useNavigate()
   const { user } = useAuth()
+  const [tab, setTab] = useState<Tab>('profile')
   const [profile, setProfile] = useState<Profile | null>(null)
   const [weeklyCount, setWeeklyCount] = useState(0)
+  const [weeklySeconds, setWeeklySeconds] = useState(0)
+  const [joinedCount, setJoinedCount] = useState(0)
+  const [hostedCount, setHostedCount] = useState(0)
 
   useEffect(() => {
     if (!user) return
@@ -19,8 +26,23 @@ export function MyPage() {
       .then(({ data }) => { if (data) setProfile(data) })
       .catch(() => {})
     fetchWeeklyExerciseSessions(user.id)
-      .then(({ data }) => { if (data) setWeeklyCount(data.length); else setWeeklyCount(MOCK_USER_PROFILE.weekly_count) })
+      .then(({ data }) => {
+        const sessions = data as unknown as { duration_seconds: number | null }[] | null
+        if (sessions) {
+          setWeeklyCount(sessions.length)
+          setWeeklySeconds(sessions.reduce((sum, s) => sum + (s.duration_seconds ?? 0), 0))
+        } else setWeeklyCount(MOCK_USER_PROFILE.weekly_count)
+      })
       .catch(() => setWeeklyCount(MOCK_USER_PROFILE.weekly_count))
+    fetchMyParticipations(user.id)
+      .then(({ data }) => {
+        const participations = data as unknown as { status: string }[] | null
+        if (participations) setJoinedCount(participations.filter(p => p.status === 'approved' || p.status === 'attended').length)
+      })
+      .catch(() => {})
+    fetchMySparks(user.id)
+      .then(({ data }) => { if (data) setHostedCount(data.length) })
+      .catch(() => {})
   }, [user])
 
   async function handleLogout() {
@@ -48,11 +70,11 @@ export function MyPage() {
 
   return (
     <div className="flex min-h-[calc(100dvh-64px)] flex-col">
-      {/* 프로필 상단 */}
-      <div className="bg-gradient-to-br from-white via-[#E8E0FF] to-[#FFF8D6] px-5 pb-6 pt-5">
+      {/* 프로필 상단 (공통 헤더) */}
+      <div className="bg-gradient-to-br from-white via-[#E8E0FF] to-[#FFF8D6] px-5 pb-4 pt-5">
         <div className="mb-4 flex items-center justify-between">
-          <h1 className="text-xl font-bold text-[#111111]">프로필</h1>
-          <Link to="/settings">
+          <h1 className="text-xl font-bold text-[#111111]">마이페이지</h1>
+          <Link to="/mypage/settings">
             <svg className="h-5 w-5 text-[#777777]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                 d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
@@ -81,61 +103,63 @@ export function MyPage() {
                 </span>
               </div>
             </div>
-            <Link to="/mypage/profile"
-              className="rounded-full border border-gray-200 px-3 py-1.5 text-xs font-medium text-[#555555]">
-              편집
-            </Link>
           </div>
 
-          {/* 주간 통계 */}
           <div className="grid grid-cols-3 gap-2 border-t border-gray-100 pt-4">
             <div className="text-center">
               <div className="text-lg font-bold text-[#111111]">{weeklyCount}</div>
               <div className="text-xs text-[#999999]">이번 주 운동</div>
             </div>
             <div className="text-center border-x border-gray-100">
-              <div className="text-lg font-bold text-[#111111]">12</div>
+              <div className="text-lg font-bold text-[#111111]">{joinedCount}</div>
               <div className="text-xs text-[#999999]">참여한 번개</div>
             </div>
             <div className="text-center">
-              <div className="text-lg font-bold text-[#111111]">3</div>
+              <div className="text-lg font-bold text-[#111111]">{hostedCount}</div>
               <div className="text-xs text-[#999999]">개설한 번개</div>
             </div>
           </div>
         </div>
-
-        {/* 선호 운동 태그 */}
-        {preferredSports.length > 0 && (
-          <div className="mt-3 flex flex-wrap gap-2">
-            {preferredSports.map(s => (
-              <span key={s} className="rounded-full border border-gray-200 bg-white px-3 py-1 text-xs text-[#555555]">
-                {getSportName(s)}
-              </span>
-            ))}
-            {workoutTraits.slice(0, 2).map(t => (
-              <span key={t} className="rounded-full border border-[#9B8FFF]/30 bg-[#EEE8FF] px-3 py-1 text-xs text-[#9B8FFF]">
-                {t}
-              </span>
-            ))}
-          </div>
-        )}
       </div>
 
-      {/* 메뉴 */}
+      {/* 3탭 */}
+      <div className="flex border-b border-gray-100 bg-white">
+        {([
+          { key: 'profile', label: '프로필' },
+          { key: 'workout', label: '운동 관리' },
+          { key: 'activity', label: '활동 관리' },
+        ] as const).map(t => (
+          <button
+            key={t.key}
+            onClick={() => setTab(t.key)}
+            className={`flex-1 py-3 text-sm font-medium ${tab === t.key ? 'border-b-2 border-[#9B8FFF] text-[#9B8FFF]' : 'text-[#999999]'}`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {/* 탭 콘텐츠 */}
       <div className="flex-1 bg-[#F5F5F5] px-5 py-4">
-        <div className="flex flex-col gap-3">
-          <MenuSection title="운동 관리">
-            <MenuItem icon="📊" label="운동 기록" desc="총 운동 히스토리" to="/mypage/exercise" />
-            <MenuItem icon="📅" label="캘린더 보기" desc="월별 운동 달력" to="/mypage/exercise" />
-          </MenuSection>
-
-          <MenuSection title="번개 모임">
-            <MenuItem icon="⚡" label="참여한 번개" desc="내가 참여한 모임" to="/mypage/activity" />
-            <MenuItem icon="🏠" label="개설한 번개" desc="내가 만든 모임" to="/mypage/activity" />
-          </MenuSection>
-
-          <MenuSection title="계정 관리">
-            <MenuItem icon="⚙️" label="설정" desc="계정·알림·약관" to="/settings" />
+        {tab === 'profile' && (
+          <div className="flex flex-col gap-3">
+            {/* 선호 운동/성향 태그 */}
+            {preferredSports.length > 0 && (
+              <div className="flex flex-wrap gap-2 rounded-2xl bg-white p-4 shadow-[0_1px_4px_rgba(0,0,0,0.06)]">
+                {preferredSports.map(s => (
+                  <span key={s} className="rounded-full border border-gray-200 px-3 py-1 text-xs text-[#555555]">
+                    {getSportName(s)}
+                  </span>
+                ))}
+                {workoutTraits.slice(0, 3).map(t => (
+                  <span key={t} className="rounded-full border border-[#9B8FFF]/30 bg-[#EEE8FF] px-3 py-1 text-xs text-[#9B8FFF]">
+                    {t}
+                  </span>
+                ))}
+              </div>
+            )}
+            <MenuItem icon="✏️" label="프로필 편집" desc="닉네임·운동 취향 수정" to="/mypage/profile" />
+            <MenuItem icon="⚙️" label="설정" desc="계정·알림·약관" to="/mypage/settings" />
             <button
               onClick={handleLogout}
               className="flex w-full items-center gap-3 rounded-2xl bg-white px-4 py-3.5 text-left shadow-[0_1px_4px_rgba(0,0,0,0.06)]"
@@ -143,18 +167,49 @@ export function MyPage() {
               <span className="text-base">🚪</span>
               <span className="text-sm text-red-500 font-medium">로그아웃</span>
             </button>
-          </MenuSection>
-        </div>
-      </div>
-    </div>
-  )
-}
+          </div>
+        )}
 
-function MenuSection({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <div>
-      <h2 className="mb-2 px-1 text-xs font-bold text-[#999999] uppercase tracking-wide">{title}</h2>
-      <div className="flex flex-col gap-2">{children}</div>
+        {tab === 'workout' && (
+          <div className="flex flex-col gap-3">
+            <div className="rounded-2xl bg-[#111111] p-4">
+              <div className="mb-3 flex items-center justify-between">
+                <h2 className="text-sm font-bold text-white">이번 주 운동</h2>
+                <Link to="/mypage/workout" className="text-xs text-[#C8FF3E]">전체보기</Link>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="rounded-xl bg-[#2A2A2A] px-3 py-3 text-center">
+                  <div className="text-xs text-[#AAAAAA]">운동 횟수</div>
+                  <div className="mt-1 text-sm font-bold text-white">{weeklyCount}회</div>
+                </div>
+                <div className="rounded-xl bg-[#2A2A2A] px-3 py-3 text-center">
+                  <div className="text-xs text-[#AAAAAA]">총 시간</div>
+                  <div className="mt-1 text-sm font-bold text-white">{weeklySeconds > 0 ? formatDuration(weeklySeconds) : '-'}</div>
+                </div>
+              </div>
+            </div>
+            <MenuItem icon="📊" label="운동 기록" desc="전체 히스토리 및 통계" to="/mypage/workout" />
+            <MenuItem icon="⚡" label="빠른 기록" desc="이미 완료한 운동 기록하기" to="/exercise" />
+          </div>
+        )}
+
+        {tab === 'activity' && (
+          <div className="flex flex-col gap-3">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="rounded-2xl bg-white p-4 text-center shadow-[0_1px_4px_rgba(0,0,0,0.06)]">
+                <div className="text-lg font-bold text-[#111111]">{joinedCount}</div>
+                <div className="text-xs text-[#999999]">참여한 번개</div>
+              </div>
+              <div className="rounded-2xl bg-white p-4 text-center shadow-[0_1px_4px_rgba(0,0,0,0.06)]">
+                <div className="text-lg font-bold text-[#111111]">{hostedCount}</div>
+                <div className="text-xs text-[#999999]">개설한 번개</div>
+              </div>
+            </div>
+            <MenuItem icon="⚡" label="참여한 번개" desc="내가 참여한 모임" to="/mypage/activity" />
+            <MenuItem icon="🏠" label="개설한 번개" desc="내가 만든 모임" to="/mypage/activity" />
+          </div>
+        )}
+      </div>
     </div>
   )
 }
@@ -174,4 +229,3 @@ function MenuItem({ icon, label, desc, to }: { icon: string; label: string; desc
     </Link>
   )
 }
-

@@ -17,6 +17,110 @@
 
 ---
 
+## 0. Figma 1페이지 와이어프레임 기준 구현 우선순위
+
+> 기준 Figma 파일: `스파크-플로우` / Page 1 / node `0:1`  
+> 분석일: 2026-06-17  
+> 이 섹션은 기존 IA·요구사항과 충돌할 경우 **우선 적용**한다. Claude Code는 아래 화면 순서와 라우팅을 기준으로 구현한다.
+
+### 0.1 Page 1 섹션 구조
+
+| Figma 섹션                | 구현 범위                                                                                              | 우선 라우트                                                                                                                            |
+| ------------------------- | ------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------- |
+| 로그인/사용자 조사 온보딩 | 소셜 로그인, 약관 동의, 전화번호 인증, 7단계 사용자 조사, 운동 레벨 결과                               | `/login`, `/onboarding/terms`, `/onboarding/phone`, `/onboarding/profile`, `/onboarding/result`                                        |
+| 홈                        | 로그인 후 홈, 최초 권한 승인 팝업, 운동 상세 팝업, 번개 상세 탭, 알림 전체/읽지 않음                   | `/home`, `/notifications`, `/exercise/:sessionId`, `/sparks/:sparkId`                                                                  |
+| 챌린지                    | 챌린지 메인, 전체/운동/모임/이벤트 탭, 이벤트 상세                                                     | `/challenges`, `/challenges/:challengeId`                                                                                              |
+| 번개 모임                 | 지도 탐색, 리스트 탐색, 상세 필터, 참여/운영 상세, 내 번개, 번개 생성, 후기                            | `/sparks`, `/sparks/list`, `/sparks/filter`, `/sparks/:sparkId`, `/sparks/new`, `/sparks/:sparkId/review`                              |
+| 마이페이지                | 프로필/운동관리/활동관리 탭, 프로필 관리, 피드 상세, 운동 통계, 설정, 기기/건강앱 연결, 문의, 회원탈퇴 | `/mypage`, `/mypage/profile`, `/mypage/workout`, `/mypage/activity`, `/mypage/settings`                                                |
+| 운동시작                  | 혼자 운동, 같이 운동, 루틴 불러오기, 종목 직접 입력, 목표 수정, 세션, 종료/결과                        | `/exercise`, `/exercise/solo/setup`, `/exercise/solo/session`, `/exercise/result`, `/exercise/spark/select`, `/exercise/spark/session` |
+
+### 0.2 Figma 기준 핵심 변경점
+
+1. **소셜 로그인 버튼은 Apple / Google / Kakao 순서**로 구현한다. 기존 문서의 Naver 버튼은 구현 대상에서 제외한다.
+2. 로그인 후 플로우는 `약관 동의 → 전화번호 인증 → 사용자 조사 7단계 → 운동 레벨 결과 → 홈` 순서다.
+3. 온보딩 7단계는 다음 순서를 고정한다.
+   1. 기본 정보 입력: 닉네임, 나이, 성별
+   2. 운동 목표
+   3. 운동 성향 태그
+   4. 좋아하는 운동 선택
+   5. 자주 하는 운동 선택
+   6. 주간 운동 빈도
+   7. 회당 평균 운동 시간
+4. 홈 최초 진입 시 권한 승인 팝업을 표시한다. 권한 항목은 푸시 알림, 건강 데이터 접근, 위치 데이터 접근이다.
+5. 번개 모임 탭의 기본 화면은 **지도 탐색**이다. 리스트는 `리스트로 확인` 액션으로 전환한다.
+6. 번개 탐색 필터는 상단 빠른 필터 `전체 / 내 나이 / 내 레벨 / 내 성별`과 상세 필터 `거리 설정`을 제공한다.
+7. 운동 시작 화면은 별도 긴 폼이 아니라 **종목 선택 + 목표 입력을 한 화면에서 처리**한다.
+8. 혼자 운동은 종목군에 따라 입력 UI를 분기한다.
+   - 걷기/러닝/자전거: 거리, 시간, 경로/지도, 목표 수정
+   - 헬스/홈트: 루틴/세트 중심 입력, 목표 수정
+   - 종목 직접 입력: 직접 입력 팝업 후 동일한 목표 입력 화면으로 합류
+9. 같이 운동은 승인된 번개가 있을 때 `모임장 화면`과 `모임원 화면`을 구분한다.
+   - 모임장: 미접속 멤버에게 알림 보내기, 운동 시작
+   - 모임원: 모임 접속 상태 확인, 운동 시작 대기 또는 참여
+10. 운동 세션 화면은 Figma에 하단 탭 영역이 포함되어 있으므로 MVP에서는 세션 중에도 하단 탭을 유지한다. 단, 세션 이탈 시 확인 모달을 띄운다.
+11. 운동 종료 후 결과 화면은 `열심히 땀흘린 기록을 남겨보아요` → `OO님, 해낼줄 알았어요!` 흐름으로 기록 저장과 보상 피드백을 제공한다.
+12. 마이페이지는 단일 프로필 페이지가 아니라 `프로필 / 운동 관리 / 활동 관리` 3탭 구조로 구현한다.
+13. 설정에는 프로필 공개, 소셜 계정, 위치 설정, 기기 연결, 건강 앱 연결, 약관, 고객센터/문의, 회원탈퇴 화면을 포함한다.
+
+### 0.3 화면 구현 순서
+
+Claude Code는 한 번에 전체를 만들기보다 아래 순서로 구현한다.
+
+```txt
+1. 공통 모바일 레이아웃 + 하단 탭
+2. 로그인/약관/전화번호 인증/온보딩 7단계/결과
+3. 홈 + 권한 팝업 + 알림
+4. 번개 지도 탐색 + 리스트 전환 + 상세 + 생성
+5. 운동 시작: 혼자 운동 전체 플로우
+6. 운동 시작: 같이 운동 모임장/모임원 플로우
+7. 마이페이지 3탭 + 운동 관리/활동 관리
+8. 챌린지 메인 + 이벤트 상세
+9. 설정/기기 연결/문의/회원탈퇴
+```
+
+### 0.4 Figma 화면명 → 컴포넌트명 권장 매핑
+
+| Figma 화면명                                | React 컴포넌트                 |
+| ------------------------------------------- | ------------------------------ |
+| 소셜로그인-로그인 시작                      | `LoginPage`                    |
+| 소셜로그인-약관 동의 및 프로필 확인         | `TermsAgreementPage`           |
+| 소셜로그인-전화번호 인증                    | `PhoneVerificationPage`        |
+| 사용자조사-기본 정보 입력                   | `OnboardingBasicInfoStep`      |
+| 사용자조사-운동목표                         | `OnboardingGoalStep`           |
+| 사용자조사-운동 성향 조사                   | `OnboardingTraitStep`          |
+| 사용자조사-좋아하는 운동 선택               | `OnboardingFavoriteSportsStep` |
+| 사용자조사-자주하는 운동 선택               | `OnboardingFrequentSportStep`  |
+| 사용자조사-운동 빈도 조사                   | `OnboardingFrequencyStep`      |
+| 사용자조사-평균 운동 시간                   | `OnboardingDurationStep`       |
+| 운동 레벨 결과                              | `OnboardingResultPage`         |
+| 홈 - 로그인 후 - 화면                       | `HomePage`                     |
+| 홈-권한 승인 팝업-처음 로그인 했을때만 표시 | `PermissionPromptModal`        |
+| 알람창-전체보기 / 읽지않음                  | `NotificationsPage`            |
+| **_ 번개 위치 지도 _** / 번개 위치 지도     | `SparksMapPage`                |
+| 번개 리스트                                 | `SparksListPage`               |
+| 지도 상세 필터 / 리스트 상세 필터           | `SparkFilterSheet`             |
+| 번개 이름, 운동 종류 입력                   | `SparkCreateStepPage`          |
+| 가입 입력 확인                              | `SparkCreateConfirmPage`       |
+| 참여한 번개 상세 페이지                     | `JoinedSparkDetailPage`        |
+| 운영중 번개 상세 페이지                     | `HostedSparkDetailPage`        |
+| 운동 종료 및 후기 / 키워드 후기             | `SparkReviewPage`              |
+| \*\*\*Pages/MyPage/Home                     | `MyPageHome`                   |
+| Pages/MyPage/ProfileManagement              | `ProfileManagementPage`        |
+| Pages/Workout/QuickRecord                   | `WorkoutQuickRecordPage`       |
+| Pages/Workout/Statistics                    | `WorkoutStatisticsPage`        |
+| Pages/Activity/JoinedLightning              | `JoinedLightningPage`          |
+| Pages/Activity/HostedLightning              | `HostedLightningPage`          |
+| Pages/Settings/Home                         | `SettingsHomePage`             |
+| 혼자 운동-종목 선택+목표 입력               | `SoloExerciseSetupPage`        |
+| 혼자 운동-루틴 불러오기                     | `SoloRoutineLoadPage`          |
+| 혼자 운동 화면-시작 전/후                   | `SoloExerciseSessionPage`      |
+| 같이 운동-소속 모임 있음, 모임장 화면       | `SparkExerciseHostReadyPage`   |
+| 같이 운동-소속 모임 있음, 모임원 화면       | `SparkExerciseMemberReadyPage` |
+| 모임장/모임원 운동세션 화면                 | `SparkExerciseSessionPage`     |
+| 혼자 운동 종료 후 화면                      | `ExerciseResultPage`           |
+
+---
+
 ## 1. 프로젝트 개요
 
 ### 프로젝트명
@@ -141,8 +245,10 @@ MCP로 확인해야 하는 항목:
 
 ### 지도/위치
 
-- MVP에서는 지도 영역을 placeholder 또는 mock 데이터로 구현 가능
-- 이후 Kakao Map, Naver Map, Mapbox 중 하나로 확장 가능
+- Figma 와이어프레임 기준 번개 모임 탭은 지도 탐색이 기본 진입 화면이다.
+- MVP 지도는 **Leaflet + OpenStreetMap(OSM)** 으로 구현한다. API 키가 필요 없는 구성을 우선한다.
+- 각 번개는 `sparks.latitude`, `sparks.longitude`를 사용해 네온 핀 또는 커스텀 마커로 표시한다.
+- 마커 클릭 시 하단 미리보기 카드가 열리고, `상세 보기`로 `/sparks/:sparkId`에 진입한다.
 - 지도 제공자는 직접 컴포넌트에 결합하지 말고 `src/lib/map` 또는 `src/features/map`에서 추상화한다.
 
 ---
@@ -327,23 +433,34 @@ SPARK의 1Depth IA는 다음 5개 탭을 기준으로 한다.
 
 ## 8. 라우팅 설계
 
+Figma 1페이지 와이어프레임 기준으로 라우팅을 재정의한다. 기존 라우트와 충돌할 경우 아래 라우트를 우선한다.
+
 ```txt
 /
 /login
-/signup
 /onboarding/terms
+/onboarding/phone
 /onboarding/profile
+/onboarding/result
 
 /home
+/notifications
 
 /exercise
-/exercise/setup
-/exercise/session
+/exercise/solo/setup
+/exercise/solo/routine
+/exercise/solo/session
 /exercise/result
+/exercise/spark/select
+/exercise/spark/host-ready/:sparkId
+/exercise/spark/member-ready/:sparkId
+/exercise/spark/session/:sparkId
 
 /sparks
-/sparks/map
+/sparks/list
+/sparks/filter
 /sparks/new
+/sparks/new/confirm
 /sparks/:sparkId
 /sparks/:sparkId/manage
 /sparks/:sparkId/review
@@ -353,25 +470,28 @@ SPARK의 1Depth IA는 다음 5개 탭을 기준으로 한다.
 
 /mypage
 /mypage/profile
-/mypage/exercise
-/mypage/exercise/:sessionId
+/mypage/workout
+/mypage/workout/:sessionId
 /mypage/activity
 /mypage/settings
-
-/settings/account
-/settings/location
-/settings/device
-/settings/terms
-/settings/help
+/mypage/settings/profile-visibility
+/mypage/settings/social
+/mypage/settings/location
+/mypage/settings/device
+/mypage/settings/health
+/mypage/settings/terms
+/mypage/settings/help
+/mypage/settings/help/new
+/mypage/settings/delete-account
 ```
 
 라우팅 규칙:
 
 - 로그인하지 않은 사용자가 보호된 페이지에 접근하면 `/login`으로 이동한다.
-- 회원가입 후 약관 동의와 프로필 설정이 완료되지 않으면 온보딩 플로우로 이동한다.
-- 하단 탭은 `/home`, `/exercise`, `/sparks`, `/challenges`, `/mypage`에서 유지한다.
-
----
+- 회원가입/소셜 로그인 후 약관 동의, 전화번호 인증, 사용자 조사 7단계가 완료되지 않으면 온보딩 플로우로 이동한다.
+- 하단 탭은 `/home`, `/exercise`, `/sparks`, `/challenges`, `/mypage` 계열에서 유지한다.
+- Figma 기준 운동 세션 화면에도 하단 탭이 있으므로 `/exercise/solo/session`, `/exercise/spark/session/:sparkId`에서도 하단 탭을 유지하되, 이탈 액션에는 확인 모달을 띄운다.
+- `/sparks`는 지도 탐색 기본 화면이고, `/sparks/list`는 리스트 전환 화면이다.
 
 ## 9. 핵심 유저플로우
 
@@ -1408,3 +1528,51 @@ TODO: 이 기능은 정책 정의가 필요합니다.
 - 빈 상태/로딩/에러 상태 구현
 - 핵심 유저플로우가 끊기지 않음
 - 서비스 정의와 IA에서 벗어난 기능 추가 없음
+
+---
+
+## 16. Figma 플로우 구현 체크리스트
+
+Claude Code가 구현 결과를 검수할 때 아래 항목을 반드시 확인한다.
+
+### 인증/온보딩
+
+- [ ] 로그인 시작 화면에 Apple / Google / Kakao 버튼이 순서대로 노출된다.
+- [ ] 약관 동의 화면에서 필수 약관 미동의 시 다음으로 진행할 수 없다.
+- [ ] 전화번호 인증 화면이 약관 동의 다음에 존재한다.
+- [ ] 사용자 조사 7단계가 Figma 순서와 동일하다.
+- [ ] 온보딩 결과 화면에서 운동 레벨, 프로필 요약, 시작 CTA가 보인다.
+
+### 홈
+
+- [ ] 최초 로그인 시 권한 승인 팝업이 뜬다.
+- [ ] 홈에서 알림 전체/읽지 않음 화면으로 이동 가능하다.
+- [ ] 홈의 운동 기록 카드 클릭 시 운동 상세 팝업 또는 상세 페이지가 열린다.
+- [ ] 홈의 번개 카드 클릭 시 번개 상세로 이동한다.
+
+### 번개
+
+- [ ] `/sparks` 기본 화면은 지도 보기다.
+- [ ] `리스트로 확인` 액션으로 리스트 화면 전환이 가능하다.
+- [ ] 빠른 필터 `전체 / 내 나이 / 내 레벨 / 내 성별`이 보인다.
+- [ ] 상세 필터에서 거리 설정을 조정할 수 있다.
+- [ ] 번개 생성은 입력 → 확인 → 생성 완료 순서다.
+- [ ] 참여한 번개와 운영중 번개 상세 UI를 구분한다.
+- [ ] 번개 종료 후 후기 작성 화면과 키워드 후기 화면이 연결된다.
+
+### 운동 시작
+
+- [ ] 혼자 운동은 종목 선택과 목표 입력이 한 화면에서 처리된다.
+- [ ] 걷기/러닝/자전거와 헬스/홈트 UI가 분기된다.
+- [ ] 종목 직접 입력 팝업이 있다.
+- [ ] 루틴 불러오기 화면이 있다.
+- [ ] 세션 시작 전 목표 수정 바텀시트 또는 팝업이 있다.
+- [ ] 같이 운동은 모임장/모임원 화면을 구분한다.
+- [ ] 운동 종료 후 기록 저장과 결과/칭찬 화면으로 이동한다.
+
+### 마이페이지/설정
+
+- [ ] 마이페이지는 프로필 / 운동 관리 / 활동 관리 3탭이다.
+- [ ] 운동 관리에는 빠른 기록, 기간별 히스토리, 통계가 있다.
+- [ ] 활동 관리는 참여한 번개와 개설한 번개를 분리한다.
+- [ ] 설정에는 프로필 공개, 소셜 계정, 위치, 기기 연결, 건강 앱 연결, 약관, 문의, 회원탈퇴가 있다.

@@ -40,6 +40,14 @@ export async function fetchWeeklyExerciseSessions(userId: string) {
     .gte('started_at', weekStart.toISOString())
 }
 
+export async function fetchExerciseSessionById(sessionId: string) {
+  return supabase
+    .from('exercise_sessions')
+    .select('*, sport:sports(code, name), spark:sparks(id, title, place_name)')
+    .eq('id', sessionId)
+    .single()
+}
+
 export async function fetchSports() {
   return supabase.from('sports').select('*').eq('is_active', true).order('name')
 }

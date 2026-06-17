@@ -86,6 +86,8 @@ export function SparkDetailPage() {
   const isHost = spark.host_id === user?.id
   const isFull = approvedCount >= spark.capacity
   const canApply = !isHost && !myParticipation && !isFull && spark.status === 'recruiting'
+  const canReview = spark.status === 'completed' &&
+    (isHost || myParticipation?.status === 'approved' || myParticipation?.status === 'attended')
   const sportCode = (spark.sport as { code?: string } | null)?.code ?? ''
   const emoji = SPORT_EMOJI[sportCode] ?? '⚡'
 
@@ -139,7 +141,6 @@ export function SparkDetailPage() {
               center={[spark.latitude!, spark.longitude!]}
               zoom={15}
               pins={[{ id: spark.id, lat: spark.latitude!, lng: spark.longitude!, label: spark.title }]}
-              height="100%"
             />
           </div>
         )}
@@ -274,6 +275,14 @@ export function SparkDetailPage() {
         )}
         {isFull && !myParticipation && !isHost && (
           <p className="text-center text-sm text-[#999999]">정원이 마감됐어요</p>
+        )}
+        {canReview && (
+          <button
+            onClick={() => navigate(`/sparks/${sparkId}/review`)}
+            className="w-full rounded-full bg-[#C8FF3E] py-4 text-base font-bold text-[#111111]"
+          >
+            후기 작성하기 ✍️
+          </button>
         )}
       </div>
     </div>

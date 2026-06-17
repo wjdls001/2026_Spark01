@@ -5,11 +5,14 @@ import { fetchProfile } from '@/features/mypage/api'
 import { fetchSparks } from '@/features/sparks/api'
 import { fetchRecentExerciseSessions, fetchWeeklyExerciseSessions, formatDuration } from '@/features/exercise/api'
 import { fetchChallenges, fetchChallengeProgress } from '@/features/challenges/api'
+import { PermissionPromptModal } from '@/components/common/PermissionPromptModal'
 import {
   MOCK_SPARKS, MOCK_EXERCISE_SESSIONS, MOCK_CHALLENGES,
   MOCK_NOTIFICATIONS, MOCK_USER_PROFILE, SPORT_EMOJI,
 } from '@/lib/mockData'
 import type { Profile, ExerciseSession, Challenge, ChallengeProgress } from '@/types/database'
+
+const PERMISSION_SEEN_KEY = 'spark_permission_seen'
 
 type SparkRow = {
   id: string
@@ -29,8 +32,17 @@ export function HomePage() {
   const [recentSessions, setRecentSessions] = useState<(ExerciseSession & { sport: { code: string; name: string } | null })[]>([])
   const [weeklyCount, setWeeklyCount] = useState(0)
   const [challenges, setChallenges] = useState<(Challenge & { progress?: ChallengeProgress })[]>([])
-  const [showNotif, setShowNotif] = useState(false)
+  const [showPermissionPrompt, setShowPermissionPrompt] = useState(false)
   const unreadCount = MOCK_NOTIFICATIONS.filter(n => !n.read_at).length
+
+  useEffect(() => {
+    if (!localStorage.getItem(PERMISSION_SEEN_KEY)) setShowPermissionPrompt(true)
+  }, [])
+
+  function dismissPermissionPrompt() {
+    localStorage.setItem(PERMISSION_SEEN_KEY, '1')
+    setShowPermissionPrompt(false)
+  }
 
   useEffect(() => {
     if (!user) return
@@ -94,45 +106,20 @@ export function HomePage() {
         {/* 헤더 */}
         <div className="mb-5 flex items-center justify-between">
           <span className="text-xl font-bold text-[#111111]">⚡ SPARK</span>
-          <div className="relative">
-            <button
-              onClick={() => setShowNotif(v => !v)}
-              className="relative rounded-full p-2 bg-white/60 shadow-sm"
-            >
-              <svg className="h-5 w-5 text-[#111111]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                  d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-              </svg>
-              {unreadCount > 0 && (
-                <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
-                  {unreadCount}
-                </span>
-              )}
-            </button>
-            {/* 알림 드롭다운 */}
-            {showNotif && (
-              <div className="absolute right-0 top-10 z-50 w-72 rounded-2xl bg-white shadow-xl overflow-hidden">
-                <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
-                  <span className="text-sm font-bold text-[#111111]">알림</span>
-                  <button onClick={() => setShowNotif(false)} className="text-[#999999] text-xs">닫기</button>
-                </div>
-                <div className="max-h-64 overflow-y-auto">
-                  {MOCK_NOTIFICATIONS.map(n => (
-                    <div key={n.id} className={`px-4 py-3 border-b border-gray-50 ${!n.read_at ? 'bg-[#F8F6FF]' : ''}`}>
-                      <div className="flex items-start gap-2">
-                        <div className={`mt-0.5 h-2 w-2 shrink-0 rounded-full ${!n.read_at ? 'bg-[#9B8FFF]' : 'bg-gray-200'}`} />
-                        <div>
-                          <p className="text-xs font-bold text-[#111111]">{n.title}</p>
-                          <p className="text-xs text-[#777777] mt-0.5">{n.body}</p>
-                          <p className="text-[10px] text-[#AAAAAA] mt-1">{timeAgo(n.created_at)}</p>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
+          <button
+            onClick={() => navigate('/notifications')}
+            className="relative rounded-full p-2 bg-white/60 shadow-sm"
+          >
+            <svg className="h-5 w-5 text-[#111111]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+            </svg>
+            {unreadCount > 0 && (
+              <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
+                {unreadCount}
+              </span>
             )}
-          </div>
+          </button>
         </div>
 
         {/* 인사말 */}
@@ -305,7 +292,7 @@ export function HomePage() {
         <div>
           <div className="mb-3 flex items-center justify-between">
             <h2 className="text-base font-bold text-white">최근 운동 기록</h2>
-            <Link to="/mypage/exercise" className="text-sm text-[#9B8FFF]">전체 보기</Link>
+            <Link to="/mypage/workout" className="text-sm text-[#9B8FFF]">전체 보기</Link>
           </div>
           {recentSessions.length === 0 ? (
             <div className="rounded-2xl bg-[#2A2A2A] px-4 py-6 text-center">
@@ -320,7 +307,11 @@ export function HomePage() {
           ) : (
             <div className="flex flex-col gap-3">
               {recentSessions.map(s => (
-                <div key={s.id} className="rounded-2xl bg-[#2A2A2A] p-4">
+                <div
+                  key={s.id}
+                  onClick={() => navigate(`/mypage/workout/${s.id}`)}
+                  className="cursor-pointer rounded-2xl bg-[#2A2A2A] p-4"
+                >
                   <div className="mb-2 flex items-center gap-2">
                     <span className="text-lg">
                       {SPORT_EMOJI[s.sport?.code ?? ''] ?? '🏃'}
@@ -351,6 +342,8 @@ export function HomePage() {
           새로운 운동 도전하기 ⚡
         </button>
       </div>
+
+      {showPermissionPrompt && <PermissionPromptModal onClose={dismissPermissionPrompt} />}
     </div>
   )
 }
@@ -425,14 +418,5 @@ function formatScheduleShort(iso: string) {
 function formatDateShort(iso: string) {
   const d = new Date(iso)
   return `${d.getMonth() + 1}/${d.getDate()}`
-}
-
-function timeAgo(iso: string) {
-  const diff = Date.now() - new Date(iso).getTime()
-  const min = Math.floor(diff / 60000)
-  if (min < 60) return `${min}분 전`
-  const h = Math.floor(min / 60)
-  if (h < 24) return `${h}시간 전`
-  return `${Math.floor(h / 24)}일 전`
 }
 

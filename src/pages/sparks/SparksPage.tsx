@@ -1,9 +1,14 @@
 import { useState, useEffect } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useLocation } from 'react-router-dom'
+import { useAuth } from '@/features/auth/useAuth'
+import { fetchProfile } from '@/features/mypage/api'
 import { fetchSparks, fetchSports } from '@/features/sparks/api'
 import { MapView } from '@/features/map/MapView'
 import { MOCK_SPARKS, MOCK_SPORTS, SPORT_EMOJI } from '@/lib/mockData'
-import type { Sport } from '@/types/database'
+import { distanceKm, getFilterRadiusKm, REFERENCE_LOCATION } from '@/lib/utils/geo'
+import type { Sport, Profile } from '@/types/database'
+
+const LEVEL_ORDER = ['beginner', 'intermediate', 'advanced', 'expert']
 
 type SparkRow = {
   id: string
@@ -14,6 +19,10 @@ type SparkRow = {
   capacity: number
   duration_minutes: number | null
   min_level: string | null
+  max_level: string | null
+  age_min?: number | null
+  age_max?: number | null
+  gender_condition?: string | null
   status: string
   latitude?: number | null
   longitude?: number | null
@@ -22,14 +31,30 @@ type SparkRow = {
   participants: { count: number }[]
 }
 
+type QuickFilter = 'all' | 'age' | 'level' | 'gender'
+
 export function SparksPage() {
   const navigate = useNavigate()
+  const location = useLocation()
+  const { user } = useAuth()
   const [sparks, setSparks] = useState<SparkRow[]>([])
   const [sports, setSports] = useState<Sport[]>([])
+  const [profile, setProfile] = useState<Profile | null>(null)
   const [selectedSport, setSelectedSport] = useState<string | null>(null)
-  const [tab, setTab] = useState<'list' | 'map'>('list')
+  const [quickFilter, setQuickFilter] = useState<QuickFilter>('all')
+  const [tab, setTab] = useState<'list' | 'map'>(location.pathname === '/sparks/list' ? 'list' : 'map')
   const [loading, setLoading] = useState(true)
   const [selectedMapSpark, setSelectedMapSpark] = useState<SparkRow | null>(null)
+  const radiusKm = getFilterRadiusKm()
+
+  useEffect(() => {
+    setTab(location.pathname === '/sparks/list' ? 'list' : 'map')
+  }, [location.pathname])
+
+  useEffect(() => {
+    if (!user) return
+    fetchProfile(user.id).then(({ data }) => { if (data) setProfile(data) }).catch(() => {})
+  }, [user])
 
   useEffect(() => {
     fetchSports()
@@ -57,7 +82,38 @@ export function SparksPage() {
       .finally(() => setLoading(false))
   }, [selectedSport])
 
-  const mapPins = sparks
+  function matchesQuickFilter(spark: SparkRow) {
+    if (quickFilter === 'all' || !profile) return true
+    if (quickFilter === 'age') {
+      if (!profile.birth_year) return true
+      const age = new Date().getFullYear() - profile.birth_year
+      if (spark.age_min != null && age < spark.age_min) return false
+      if (spark.age_max != null && age > spark.age_max) return false
+      return true
+    }
+    if (quickFilter === 'level') {
+      const myRank = LEVEL_ORDER.indexOf(profile.exercise_level)
+      const minRank = spark.min_level ? LEVEL_ORDER.indexOf(spark.min_level) : -1
+      const maxRank = spark.max_level ? LEVEL_ORDER.indexOf(spark.max_level) : LEVEL_ORDER.length - 1
+      if (myRank === -1) return true
+      return myRank >= minRank && myRank <= maxRank
+    }
+    if (quickFilter === 'gender') {
+      if (!spark.gender_condition || spark.gender_condition === 'any') return true
+      if (!profile.gender) return true
+      return spark.gender_condition === profile.gender
+    }
+    return true
+  }
+
+  function matchesDistance(spark: SparkRow) {
+    if (!spark.latitude || !spark.longitude) return true
+    return distanceKm(REFERENCE_LOCATION.lat, REFERENCE_LOCATION.lng, spark.latitude, spark.longitude) <= radiusKm
+  }
+
+  const visibleSparks = sparks.filter(s => matchesQuickFilter(s) && matchesDistance(s))
+
+  const mapPins = visibleSparks
     .filter(s => s.latitude && s.longitude)
     .map(s => ({
       id: s.id,
@@ -81,24 +137,42 @@ export function SparksPage() {
           </Link>
         </div>
 
-        {/* 리스트/지도 탭 */}
-        <div className="mb-3 flex gap-1 rounded-full bg-gray-100 p-1">
+        {/* 지도/리스트 전환 */}
+        <div className="mb-3 flex items-center justify-between">
           <button
-            onClick={() => setTab('list')}
-            className={`flex-1 rounded-full py-1.5 text-sm font-medium transition-colors ${
-              tab === 'list' ? 'bg-white text-[#111111] shadow-sm' : 'text-[#777777]'
-            }`}
+            onClick={() => navigate(tab === 'map' ? '/sparks/list' : '/sparks')}
+            className="rounded-full bg-gray-100 px-4 py-1.5 text-sm font-medium text-[#555555]"
           >
-            리스트
+            {tab === 'map' ? '리스트로 확인' : '지도로 보기'}
           </button>
           <button
-            onClick={() => setTab('map')}
-            className={`flex-1 rounded-full py-1.5 text-sm font-medium transition-colors ${
-              tab === 'map' ? 'bg-white text-[#111111] shadow-sm' : 'text-[#777777]'
-            }`}
+            onClick={() => navigate('/sparks/filter')}
+            className="rounded-full border border-gray-200 px-3 py-1.5 text-xs font-medium text-[#555555]"
           >
-            지도
+            상세 필터 (반경 {radiusKm}km)
           </button>
+        </div>
+
+        {/* 빠른 필터 */}
+        <div className="mb-3 flex gap-2 overflow-x-auto pb-1 [&::-webkit-scrollbar]:hidden">
+          {([
+            { value: 'all', label: '전체' },
+            { value: 'age', label: '내 나이' },
+            { value: 'level', label: '내 레벨' },
+            { value: 'gender', label: '내 성별' },
+          ] as const).map(f => (
+            <button
+              key={f.value}
+              onClick={() => setQuickFilter(f.value)}
+              className={`shrink-0 rounded-full border px-3 py-1.5 text-xs font-medium ${
+                quickFilter === f.value
+                  ? 'border-[#C8FF3E] bg-[#C8FF3E] text-[#111111]'
+                  : 'border-gray-200 text-[#555555]'
+              }`}
+            >
+              {f.label}
+            </button>
+          ))}
         </div>
 
         {/* 종목 필터 */}
@@ -131,12 +205,11 @@ export function SparksPage() {
 
       {/* 지도 탭 */}
       {tab === 'map' ? (
-        <div className="relative flex-1" style={{ minHeight: 'calc(100dvh - 220px)' }}>
+        <div className="relative flex-1" style={{ height: 'calc(100dvh - 220px)' }}>
           <MapView
             center={[37.5283, 126.9342]}
             zoom={12}
             pins={mapPins}
-            height="100%"
           />
           {/* 지도 위 선택된 번개 카드 */}
           {selectedMapSpark && (
@@ -172,7 +245,7 @@ export function SparksPage() {
           )}
           {/* 내 위치 핀 카운트 */}
           <div className="absolute top-3 right-3 z-[1000] rounded-full bg-white px-3 py-1.5 text-xs font-medium text-[#333333] shadow">
-            총 {sparks.length}개의 번개
+            총 {visibleSparks.length}개의 번개
           </div>
         </div>
       ) : (
@@ -182,7 +255,7 @@ export function SparksPage() {
             <div className="flex justify-center py-10">
               <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#9B8FFF] border-t-transparent" />
             </div>
-          ) : sparks.length === 0 ? (
+          ) : visibleSparks.length === 0 ? (
             <div className="flex flex-col items-center py-10 text-center">
               <div className="mb-3 text-4xl">⚡</div>
               <p className="text-sm text-[#777777]">근처에 열린 번개가 아직 없어요.</p>
@@ -196,7 +269,7 @@ export function SparksPage() {
             </div>
           ) : (
             <div className="flex flex-col gap-4">
-              {sparks.map(spark => (
+              {visibleSparks.map(spark => (
                 <SparkCard key={spark.id} spark={spark} />
               ))}
             </div>

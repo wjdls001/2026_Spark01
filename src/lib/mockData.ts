@@ -65,6 +65,8 @@ export const MOCK_SPARKS = [
     min_level: 'beginner',
     max_level: 'intermediate',
     gender_condition: 'any',
+    age_min: 20,
+    age_max: 35,
     status: 'recruiting',
     participants: [{ count: 2 }],
     created_at: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
@@ -87,6 +89,8 @@ export const MOCK_SPARKS = [
     min_level: 'intermediate',
     max_level: null,
     gender_condition: 'any',
+    age_min: 25,
+    age_max: 40,
     status: 'recruiting',
     participants: [{ count: 1 }],
     created_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
@@ -130,7 +134,9 @@ export const MOCK_SPARKS = [
     capacity: 6,
     min_level: 'beginner',
     max_level: null,
-    gender_condition: 'any',
+    gender_condition: 'female',
+    age_min: 20,
+    age_max: 30,
     status: 'recruiting',
     participants: [{ count: 4 }],
     created_at: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
@@ -348,6 +354,12 @@ export const MOCK_USER_PROFILE = {
   weekly_count: 3,
   xp: 1240,
 }
+
+export const MOCK_ROUTINES = [
+  { id: 'r1', sportCode: 'fitness', name: '초보자 전신 루틴', sets: '3', reps: '12' },
+  { id: 'r2', sportCode: 'fitness', name: '상체 집중 루틴', sets: '4', reps: '10' },
+  { id: 'r3', sportCode: 'fitness', name: '하체 집중 루틴', sets: '4', reps: '15' },
+]
 
 export const SPORT_EMOJI: Record<string, string> = {
   running: '🏃',

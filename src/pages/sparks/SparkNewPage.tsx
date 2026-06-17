@@ -1,11 +1,9 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useAuth } from '@/features/auth/useAuth'
-import { createSpark, fetchSports } from '@/features/sparks/api'
-import { supabase } from '@/lib/supabase/client'
+import { fetchSports } from '@/features/sparks/api'
 import type { Sport } from '@/types/database'
 
-const LEVELS = [
+export const LEVELS = [
   { value: 'beginner', label: '초보자' },
   { value: 'intermediate', label: '중급자' },
   { value: 'advanced', label: '고급자' },
@@ -14,9 +12,7 @@ const LEVELS = [
 
 export function SparkNewPage() {
   const navigate = useNavigate()
-  const { user } = useAuth()
   const [sports, setSports] = useState<Sport[]>([])
-  const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
   const [form, setForm] = useState({
@@ -42,48 +38,12 @@ export function SparkNewPage() {
     setForm(f => ({ ...f, [field]: value }))
   }
 
-  async function handleSubmit() {
-    if (!user) return
+  function handleNext() {
     if (!form.title.trim()) { setError('번개 제목을 입력해주세요.'); return }
     if (!form.scheduled_date || !form.scheduled_time) { setError('날짜와 시간을 입력해주세요.'); return }
     if (!form.place_name.trim()) { setError('장소를 입력해주세요.'); return }
-
-    setLoading(true)
     setError('')
-
-    const scheduledAt = new Date(`${form.scheduled_date}T${form.scheduled_time}`).toISOString()
-
-    const { data, error: err } = await createSpark({
-      host_id: user.id,
-      title: form.title.trim(),
-      sport_id: form.sport_id || null,
-      place_name: form.place_name.trim() || null,
-      address: form.address.trim() || null,
-      scheduled_at: scheduledAt,
-      duration_minutes: form.duration_minutes ? Number(form.duration_minutes) : null,
-      capacity: Number(form.capacity) || 4,
-      min_level: form.min_level || null,
-      max_level: form.max_level || null,
-      gender_condition: form.gender_condition || 'any',
-      description: form.description.trim() || null,
-      status: 'recruiting',
-    })
-
-    if (err || !data) {
-      setError('번개 생성에 실패했어요.')
-      setLoading(false)
-      return
-    }
-
-    // 호스트를 참여자로 자동 추가
-    await supabase.from('spark_participants').insert({
-      spark_id: (data as { id: string }).id,
-      user_id: user.id,
-      role: 'host',
-      status: 'approved',
-    })
-
-    navigate(`/sparks/${(data as { id: string }).id}`, { replace: true })
+    navigate('/sparks/new/confirm', { state: { form, sports } })
   }
 
   return (
@@ -188,9 +148,9 @@ export function SparkNewPage() {
 
       <div className="px-5 pb-8 pt-3">
         {error && <p className="mb-2 text-center text-sm text-red-500">{error}</p>}
-        <button onClick={handleSubmit} disabled={loading}
-          className="w-full rounded-full bg-[#C8FF3E] py-4 text-base font-bold text-[#111111] disabled:opacity-60">
-          {loading ? '생성 중...' : '번개 만들기 ⚡'}
+        <button onClick={handleNext}
+          className="w-full rounded-full bg-[#C8FF3E] py-4 text-base font-bold text-[#111111]">
+          다음 ⚡
         </button>
       </div>
     </div>

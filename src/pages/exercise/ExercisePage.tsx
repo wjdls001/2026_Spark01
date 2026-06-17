@@ -13,7 +13,7 @@ export function ExercisePage() {
       <div className="flex flex-1 flex-col justify-center gap-4 px-5 pb-10">
         {/* 혼자 운동 */}
         <button
-          onClick={() => navigate('/exercise/setup', { state: { mode: 'solo' } })}
+          onClick={() => navigate('/exercise/solo/setup', { state: { mode: 'solo' } })}
           className="flex flex-col rounded-3xl bg-white p-6 shadow-[0_2px_16px_rgba(0,0,0,0.10)] text-left"
         >
           <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-[#EEE8FF]">
@@ -30,7 +30,7 @@ export function ExercisePage() {
 
         {/* 같이 운동 */}
         <button
-          onClick={() => navigate('/sparks')}
+          onClick={() => navigate('/exercise/spark/select')}
           className="flex flex-col rounded-3xl bg-[#111111] p-6 text-left"
         >
           <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-[#C8FF3E]">
@@ -47,7 +47,7 @@ export function ExercisePage() {
 
         {/* 빠른 기록 */}
         <button
-          onClick={() => navigate('/exercise/setup', { state: { mode: 'solo', quick: true } })}
+          onClick={() => navigate('/exercise/solo/setup', { state: { mode: 'solo', quick: true } })}
           className="rounded-2xl border border-gray-200 bg-white px-5 py-4 text-left"
         >
           <div className="flex items-center justify-between">

@@ -89,3 +89,19 @@ export async function fetchMySparks(userId: string) {
 export async function fetchSports() {
   return supabase.from('sports').select('*').eq('is_active', true).order('name')
 }
+
+export async function createSparkReview(data: {
+  spark_id: string
+  reviewer_id: string
+  reviewee_id: string
+  keywords: string[]
+  review_type?: 'positive' | 'negative'
+}) {
+  return supabase.from('spark_reviews').insert({
+    spark_id: data.spark_id,
+    reviewer_id: data.reviewer_id,
+    reviewee_id: data.reviewee_id,
+    keywords: data.keywords,
+    review_type: data.review_type ?? 'positive',
+  })
+}

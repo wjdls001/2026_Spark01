@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/features/auth/useAuth'
 import { fetchChallenges, fetchChallengeProgress, joinChallenge } from '@/features/challenges/api'
 import { MOCK_CHALLENGES } from '@/lib/mockData'
@@ -14,7 +15,7 @@ type MockChallenge = {
   starts_at: string
   ends_at: string
   is_active: boolean
-  emoji: string
+  emoji?: string
   event_rewards?: { rank: string; desc: string }[]
   event_date?: string
   event_place?: string
@@ -33,12 +34,12 @@ const TABS = [
 type TabKey = 'all' | 'exercise' | 'spark' | 'event'
 
 export function ChallengesPage() {
+  const navigate = useNavigate()
   const { user } = useAuth()
   const [tab, setTab] = useState<TabKey>('all')
   const [challenges, setChallenges] = useState<ChallengeWithProgress[]>([])
   const [loading, setLoading] = useState(true)
   const [joining, setJoining] = useState<string | null>(null)
-  const [selectedEvent, setSelectedEvent] = useState<MockChallenge | null>(null)
 
   async function load() {
     if (!user) return
@@ -156,47 +157,12 @@ export function ChallengesPage() {
                 challenge={c as unknown as MockChallenge}
                 joining={joining === c.id}
                 onJoin={() => handleJoin(c.id)}
-                onEventClick={() => setSelectedEvent(c as unknown as MockChallenge)}
+                onEventClick={() => navigate(`/challenges/${c.id}`)}
               />
             ))}
           </div>
         )}
       </div>
-
-      {/* 이벤트 상세 모달 */}
-      {selectedEvent && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40">
-          <div className="max-h-[80dvh] w-full max-w-[430px] overflow-y-auto rounded-t-3xl bg-white p-5">
-            <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-base font-bold text-[#111111]">이벤트 상세보기</h2>
-              <button onClick={() => setSelectedEvent(null)} className="text-[#999999]">✕</button>
-            </div>
-            <h3 className="mb-2 text-lg font-bold text-[#111111]">{selectedEvent.title}</h3>
-            <p className="mb-4 text-sm text-[#555555]">{selectedEvent.description}</p>
-            <button className="mb-5 w-full rounded-full bg-[#9B8FFF] py-3 text-sm font-bold text-white">
-              참여하기
-            </button>
-            <p className="mb-3 text-xs font-bold text-[#333333]">스파크와 함께<br />건강도, 선물도 모두 챙겨가세요</p>
-            {selectedEvent.event_rewards?.map((r, i) => (
-              <div key={i} className="mb-3 rounded-xl bg-gray-50 p-3">
-                <div className="flex items-center gap-2">
-                  <span className="text-lg">{i === 0 ? '🥇' : '🥈'}</span>
-                  <div>
-                    <p className="text-xs font-bold text-[#111111]">{r.rank}</p>
-                    <p className="text-xs text-[#555555]">{r.desc}</p>
-                  </div>
-                </div>
-              </div>
-            ))}
-            {selectedEvent.event_date && (
-              <div className="mt-3 rounded-xl bg-[#EEE8FF] p-3 text-xs text-[#555555]">
-                <p>일시: {selectedEvent.event_date}</p>
-                {selectedEvent.event_place && <p>장소: {selectedEvent.event_place}</p>}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
     </div>
   )
 }
@@ -227,6 +193,7 @@ function ChallengeCard({
     event: 'bg-[#FFE8F0] text-[#D04070]',
   }
   const typeLabels: Record<string, string> = { exercise: '운동', spark: '번개', event: '이벤트' }
+  const typeEmoji: Record<string, string> = { exercise: '🏃', spark: '⚡', event: '🎁' }
 
   return (
     <div
@@ -238,7 +205,7 @@ function ChallengeCard({
         <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${
           completed ? 'bg-[#C8FF3E]' : 'bg-[#EEE8FF]'
         }`}>
-          <span className="text-2xl">{completed ? '🏆' : c.emoji}</span>
+          <span className="text-2xl">{completed ? '🏆' : c.emoji ?? typeEmoji[c.challenge_type]}</span>
         </div>
 
         <div className="flex-1">

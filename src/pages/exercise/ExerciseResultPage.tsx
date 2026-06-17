@@ -6,6 +6,7 @@ import type { Sport } from '@/types/database'
 
 type ResultState = {
   mode?: string
+  sparkId?: string
   sport?: Sport | null
   startedAt?: string
   endedAt?: string
@@ -32,7 +33,9 @@ export function ExerciseResultPage() {
       await createExerciseSession({
         user_id: user.id,
         mode: (s.mode === 'spark' ? 'spark' : 'solo') as 'solo' | 'spark',
-        sport_id: s.sport?.id ?? null,
+        spark_id: s.sparkId ?? null,
+        sport_id: s.sport?.id && s.sport.id !== 'custom' ? s.sport.id : null,
+        title: s.sport?.id === 'custom' ? s.sport.name : null,
         started_at: s.startedAt ?? new Date().toISOString(),
         ended_at: s.endedAt ?? new Date().toISOString(),
         duration_seconds: s.durationSeconds ?? null,

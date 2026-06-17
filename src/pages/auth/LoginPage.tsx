@@ -1,18 +1,64 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { supabase } from '@/lib/supabase/client'
+
+// TEST-ONLY: 실제 OAuth provider 설정 전까지 소셜 로그인 버튼이 즉시 로그인되도록 연결해둔 데모 계정.
+const DEMO_OAUTH_ACCOUNTS: Record<'apple' | 'google' | 'kakao', { email: string; password: string }> = {
+  apple: { email: 'demo.runner@spark.local', password: 'demo-password-not-for-login' },
+  google: { email: 'demo.fitness@spark.local', password: 'demo-password-not-for-login' },
+  kakao: { email: 'demo.cycling@spark.local', password: 'demo-password-not-for-login' },
+}
 
 export function LoginPage() {
   const navigate = useNavigate()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [confirm, setConfirm] = useState('')
+  const [mode, setMode] = useState<'login' | 'signup'>('login')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [showEmailForm, setShowEmailForm] = useState(false)
+  const [oauthError, setOauthError] = useState('')
+
+  // TEST-ONLY: Apple/Google/Kakao 실제 OAuth는 Supabase Auth Provider 설정(개발자 콘솔 Client ID·Secret 등록)이
+  // 필요해 아직 연결되지 않았다. 테스트 빌드에서는 버튼 클릭 시 provider별 데모 계정으로 즉시 로그인 처리한다.
+  // 실 자격증명이 준비되면 supabase.auth.signInWithOAuth({ provider, options: { redirectTo } })로 교체할 것.
+  async function handleOAuthLogin(provider: 'apple' | 'google' | 'kakao') {
+    setOauthError('')
+    setLoading(true)
+    const demo = DEMO_OAUTH_ACCOUNTS[provider]
+    const { error: err } = await supabase.auth.signInWithPassword(demo)
+    if (err) {
+      setOauthError('소셜 로그인 테스트 계정 연결에 실패했어요.')
+      setLoading(false)
+      return
+    }
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user) {
+      const { data: profile } = await supabase.from('profiles').select('id').eq('id', user.id).single()
+      navigate(profile ? '/home' : '/onboarding/terms', { replace: true })
+    }
+    setLoading(false)
+  }
 
   async function handleLogin(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     setError('')
+
+    if (mode === 'signup') {
+      if (password !== confirm) { setError('비밀번호가 일치하지 않아요.'); return }
+      if (password.length < 6) { setError('비밀번호는 6자 이상이어야 해요.'); return }
+      setLoading(true)
+      const { error: err } = await supabase.auth.signUp({ email, password })
+      if (err) {
+        setError(err.message.includes('already') ? '이미 사용 중인 이메일이에요.' : '회원가입에 실패했어요.')
+      } else {
+        navigate('/onboarding/terms', { replace: true })
+      }
+      setLoading(false)
+      return
+    }
+
     setLoading(true)
     const { error: err } = await supabase.auth.signInWithPassword({ email, password })
     if (err) {
@@ -42,23 +88,37 @@ export function LoginPage() {
         <div className="mt-10 w-full max-w-xs">
           {!showEmailForm ? (
             <div className="flex flex-col gap-3">
-              {/* 카카오 로그인 */}
-              <button className="flex w-full items-center justify-center gap-3 rounded-full bg-[#FEE500] py-3.5 text-sm font-bold text-[#111111]">
-                <KakaoIcon />
-                카카오로 시작하기
-              </button>
-
               {/* Apple 로그인 */}
-              <button className="flex w-full items-center justify-center gap-3 rounded-full bg-[#111111] py-3.5 text-sm font-bold text-white">
+              <button
+                onClick={() => handleOAuthLogin('apple')}
+                disabled={loading}
+                className="flex w-full items-center justify-center gap-3 rounded-full bg-[#111111] py-3.5 text-sm font-bold text-white disabled:opacity-60"
+              >
                 <AppleIcon />
                 Apple로 시작하기
               </button>
 
-              {/* 네이버 로그인 */}
-              <button className="flex w-full items-center justify-center gap-3 rounded-full bg-[#03C75A] py-3.5 text-sm font-bold text-white">
-                <NaverIcon />
-                네이버로 시작하기
+              {/* Google 로그인 */}
+              <button
+                onClick={() => handleOAuthLogin('google')}
+                disabled={loading}
+                className="flex w-full items-center justify-center gap-3 rounded-full border border-gray-200 bg-white py-3.5 text-sm font-bold text-[#111111] disabled:opacity-60"
+              >
+                <GoogleIcon />
+                Google로 시작하기
               </button>
+
+              {/* 카카오 로그인 */}
+              <button
+                onClick={() => handleOAuthLogin('kakao')}
+                disabled={loading}
+                className="flex w-full items-center justify-center gap-3 rounded-full bg-[#FEE500] py-3.5 text-sm font-bold text-[#111111] disabled:opacity-60"
+              >
+                <KakaoIcon />
+                카카오로 시작하기
+              </button>
+
+              {oauthError && <p className="text-center text-xs text-red-500">{oauthError}</p>}
 
               <div className="relative my-2 flex items-center gap-3">
                 <div className="h-px flex-1 bg-gray-200" />
@@ -84,6 +144,24 @@ export function LoginPage() {
               >
                 ← 뒤로
               </button>
+
+              <div className="flex gap-1 rounded-full bg-gray-100 p-1">
+                <button
+                  type="button"
+                  onClick={() => { setMode('login'); setError('') }}
+                  className={`flex-1 rounded-full py-1.5 text-sm font-medium transition-colors ${mode === 'login' ? 'bg-white text-[#111111] shadow-sm' : 'text-[#777777]'}`}
+                >
+                  로그인
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setMode('signup'); setError('') }}
+                  className={`flex-1 rounded-full py-1.5 text-sm font-medium transition-colors ${mode === 'signup' ? 'bg-white text-[#111111] shadow-sm' : 'text-[#777777]'}`}
+                >
+                  회원가입
+                </button>
+              </div>
+
               <div>
                 <label className="mb-1 block text-xs font-medium text-[#555555]">이메일</label>
                 <input
@@ -96,24 +174,29 @@ export function LoginPage() {
                 <label className="mb-1 block text-xs font-medium text-[#555555]">비밀번호</label>
                 <input
                   type="password" value={password} onChange={e => setPassword(e.target.value)}
-                  placeholder="비밀번호를 입력하세요" required
+                  placeholder={mode === 'signup' ? '6자 이상 입력하세요' : '비밀번호를 입력하세요'} required
                   className="w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm outline-none focus:border-[#9B8FFF] focus:bg-white"
                 />
               </div>
+              {mode === 'signup' && (
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-[#555555]">비밀번호 확인</label>
+                  <input
+                    type="password" value={confirm} onChange={e => setConfirm(e.target.value)}
+                    placeholder="비밀번호를 한 번 더 입력하세요" required
+                    className="w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm outline-none focus:border-[#9B8FFF] focus:bg-white"
+                  />
+                </div>
+              )}
               {error && <p className="text-xs text-red-500">{error}</p>}
               <button
                 type="submit" disabled={loading}
                 className="w-full rounded-full bg-[#C8FF3E] py-4 text-base font-bold text-[#111111] disabled:opacity-60"
               >
-                {loading ? '로그인 중...' : '로그인'}
+                {loading ? (mode === 'signup' ? '가입 중...' : '로그인 중...') : (mode === 'signup' ? '회원가입' : '로그인')}
               </button>
             </form>
           )}
-
-          <p className="mt-6 text-center text-xs text-[#999999]">
-            계정이 없으신가요?{' '}
-            <Link to="/signup" className="font-bold text-[#9B8FFF]">회원가입</Link>
-          </p>
         </div>
       </div>
 
@@ -145,10 +228,13 @@ function AppleIcon() {
   )
 }
 
-function NaverIcon() {
+function GoogleIcon() {
   return (
     <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-      <path d="M10.2 9.54L7.68 6H6v6h1.8V8.46L10.32 12H12V6h-1.8v3.54z" fill="white"/>
+      <path d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84a4.14 4.14 0 01-1.8 2.72v2.26h2.9c1.7-1.57 2.7-3.87 2.7-6.62z" fill="#4285F4"/>
+      <path d="M9 18c2.43 0 4.47-.81 5.96-2.18l-2.9-2.26c-.81.54-1.84.87-3.06.87-2.36 0-4.36-1.6-5.08-3.74H.96v2.33A9 9 0 009 18z" fill="#34A853"/>
+      <path d="M3.92 10.69A5.4 5.4 0 013.64 9c0-.59.1-1.16.28-1.69V4.98H.96A9 9 0 000 9c0 1.45.35 2.83.96 4.02l2.96-2.33z" fill="#FBBC05"/>
+      <path d="M9 3.58c1.32 0 2.51.46 3.44 1.34l2.58-2.58A8.96 8.96 0 009 0 9 9 0 00.96 4.98l2.96 2.33C4.64 5.18 6.64 3.58 9 3.58z" fill="#EA4335"/>
     </svg>
   )
 }

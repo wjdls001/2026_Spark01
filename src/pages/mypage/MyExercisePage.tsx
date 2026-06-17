@@ -25,8 +25,8 @@ export function MyExercisePage() {
     })
   }, [user])
 
-  const totalDist = sessions.reduce((s, r) => s + (Number(r.distance_meters) ?? 0), 0)
-  const totalCal = sessions.reduce((s, r) => s + (Number(r.calories) ?? 0), 0)
+  const totalDist = sessions.reduce((s, r) => s + Number(r.distance_meters ?? 0), 0)
+  const totalCal = sessions.reduce((s, r) => s + Number(r.calories ?? 0), 0)
   const weekTime = weekSessions.reduce((s, r) => s + (r.duration_seconds ?? 0), 0)
 
   return (
@@ -80,7 +80,11 @@ export function MyExercisePage() {
           ) : (
             <div className="flex flex-col gap-3">
               {sessions.map(s => (
-                <div key={s.id} className="rounded-2xl bg-white p-4 shadow-[0_2px_12px_rgba(0,0,0,0.08)]">
+                <div
+                  key={s.id}
+                  onClick={() => navigate(`/mypage/workout/${s.id}`)}
+                  className="cursor-pointer rounded-2xl bg-white p-4 shadow-[0_2px_12px_rgba(0,0,0,0.08)]"
+                >
                   <div className="mb-3 flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <span className="rounded-full bg-[#EEE8FF] px-3 py-1 text-xs font-medium text-[#9B8FFF]">
