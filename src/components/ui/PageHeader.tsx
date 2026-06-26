@@ -17,7 +17,7 @@ export function PageHeader({ title, showBack = true, right }: PageHeaderProps) {
           </svg>
         </button>
       ) : <div className="w-9" />}
-      <h1 className="text-base font-bold text-[#111111]">{title}</h1>
+      <h1 className="text-base font-bold text-spark-dark">{title}</h1>
       <div className="w-9">{right}</div>
     </header>
   )

@@ -23,11 +23,11 @@ export function SettingsPage() {
     <div className="flex min-h-dvh flex-col">
       <div className="flex items-center gap-3 bg-white px-5 py-4 shadow-sm">
         <button onClick={() => navigate(-1)}>
-          <svg className="h-6 w-6 text-[#111111]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="h-6 w-6 text-spark-dark" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
         </button>
-        <h1 className="text-lg font-bold text-[#111111]">설정</h1>
+        <h1 className="text-lg font-bold text-spark-dark">설정</h1>
       </div>
 
       <div className="flex-1 bg-[#F5F5F5] px-5 py-5">
@@ -40,8 +40,8 @@ export function SettingsPage() {
             >
               <span className="text-lg shrink-0">{item.icon}</span>
               <div className="flex-1">
-                <div className="text-sm font-medium text-[#111111]">{item.label}</div>
-                <div className="text-xs text-[#AAAAAA]">{item.desc}</div>
+                <div className="text-sm font-medium text-spark-dark">{item.label}</div>
+                <div className="text-xs text-spark-gray">{item.desc}</div>
               </div>
               <svg className="h-4 w-4 shrink-0 text-[#CCCCCC]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -56,7 +56,7 @@ export function SettingsPage() {
             로그아웃
           </button>
           <Link to="/mypage/settings/delete-account"
-            className="w-full rounded-2xl bg-white px-4 py-3.5 text-left text-sm text-[#AAAAAA] shadow-[0_1px_4px_rgba(0,0,0,0.06)]">
+            className="w-full rounded-2xl bg-white px-4 py-3.5 text-left text-sm text-spark-gray shadow-[0_1px_4px_rgba(0,0,0,0.06)]">
             회원탈퇴
           </Link>
         </div>

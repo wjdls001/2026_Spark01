@@ -18,8 +18,10 @@ export const MOCK_PROFILES = [
     id: 'u1',
     nickname: '러닝메이트김',
     avatar_url: null,
+    gender: 'male',
+    birth_year: 1996,
     exercise_level: 'intermediate',
-    trust_score: 87,
+    trust_score: 82,
     preferred_sports: ['s1', 's9'],
     workout_traits: ['규칙적', '조용한 편'],
     activity_area: '마포구',
@@ -28,8 +30,10 @@ export const MOCK_PROFILES = [
     id: 'u2',
     nickname: '헬스왕박',
     avatar_url: null,
+    gender: 'male',
+    birth_year: 1990,
     exercise_level: 'advanced',
-    trust_score: 92,
+    trust_score: 91,
     preferred_sports: ['s3', 's4'],
     workout_traits: ['열정적', '초보환영'],
     activity_area: '강남구',
@@ -38,11 +42,49 @@ export const MOCK_PROFILES = [
     id: 'u3',
     nickname: '새벽자전거이',
     avatar_url: null,
+    gender: 'female',
+    birth_year: 2000,
     exercise_level: 'beginner',
     trust_score: 74,
     preferred_sports: ['s2'],
     workout_traits: ['조용한 편'],
     activity_area: '용산구',
+  },
+  {
+    id: 'u4',
+    nickname: '요가하늘',
+    avatar_url: null,
+    gender: 'female',
+    birth_year: 1994,
+    exercise_level: 'intermediate',
+    trust_score: 88,
+    preferred_sports: ['s10'],
+    workout_traits: ['꾸준함', '아침형'],
+    activity_area: '성동구',
+  },
+  {
+    id: 'u5',
+    nickname: '배드민턴민수',
+    avatar_url: null,
+    gender: 'male',
+    birth_year: 1998,
+    exercise_level: 'advanced',
+    trust_score: 79,
+    preferred_sports: ['s7'],
+    workout_traits: ['승부욕', '주말운동'],
+    activity_area: '송파구',
+  },
+  {
+    id: 'u6',
+    nickname: '수영하는지은',
+    avatar_url: null,
+    gender: 'female',
+    birth_year: 1992,
+    exercise_level: 'expert',
+    trust_score: 96,
+    preferred_sports: ['s8'],
+    workout_traits: ['새벽형', '꼼꼼함'],
+    activity_area: '광진구',
   },
 ]
 
@@ -85,7 +127,7 @@ export const MOCK_SPARKS = [
     longitude: 127.0276,
     scheduled_at: new Date(Date.now() + 4 * 60 * 60 * 1000).toISOString(),
     duration_minutes: 90,
-    capacity: 2,
+    capacity: 5,
     min_level: 'intermediate',
     max_level: null,
     gender_condition: 'any',
@@ -165,6 +207,214 @@ export const MOCK_SPARKS = [
   },
 ]
 
+// 지도 기준 위치(서울시청) 근처에 더미 마커가 충분히 보이도록 보강한 데이터.
+// 실제 DB 결과/MOCK_SPARKS와 합쳐서 보여준다.
+export const MOCK_NEARBY_SPARKS = [
+  {
+    id: 'spark-near-1',
+    host_id: 'u1',
+    host: MOCK_PROFILES[0],
+    sport_id: 's1',
+    sport: MOCK_SPORTS[0],
+    title: '광화문 아침 러닝 같이해요',
+    description: '출근 전 광화문광장 한바퀴! 가볍게 30분 정도 달릴 예정이에요.',
+    place_name: '광화문광장',
+    address: '서울 종로구 세종대로',
+    latitude: 37.6023,
+    longitude: 126.9779,
+    scheduled_at: new Date(Date.now() + 5 * 60 * 60 * 1000).toISOString(),
+    duration_minutes: 40,
+    capacity: 6,
+    min_level: 'beginner',
+    max_level: 'intermediate',
+    gender_condition: 'any',
+    age_min: null,
+    age_max: null,
+    status: 'recruiting',
+    participants: [{ count: 2 }],
+    created_at: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
+  },
+  {
+    id: 'spark-near-2',
+    host_id: 'u2',
+    host: MOCK_PROFILES[1],
+    sport_id: 's3',
+    sport: MOCK_SPORTS[2],
+    title: '을지로 헬스장 파트너 구해요',
+    description: '주 3회 정도 같이 운동할 헬스 파트너 구합니다. 초보 환영!',
+    place_name: '을지로 피트니스센터',
+    address: '서울 중구 을지로',
+    latitude: 37.5663,
+    longitude: 127.0233,
+    scheduled_at: new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString(),
+    duration_minutes: 90,
+    capacity: 4,
+    min_level: 'beginner',
+    max_level: null,
+    gender_condition: 'any',
+    age_min: null,
+    age_max: null,
+    status: 'recruiting',
+    participants: [{ count: 1 }],
+    created_at: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
+  },
+  {
+    id: 'spark-near-3',
+    host_id: 'u3',
+    host: MOCK_PROFILES[2],
+    sport_id: 's7',
+    sport: MOCK_SPORTS[6],
+    title: '경복궁 근처 배드민턴 모임',
+    description: '주말 오후 가볍게 배드민턴 치실 분 구해요. 라켓 대여 가능합니다.',
+    place_name: '경복궁역 체육관',
+    address: '서울 종로구 자하문로',
+    latitude: 37.5663,
+    longitude: 126.9325,
+    scheduled_at: new Date(Date.now() + 26 * 60 * 60 * 1000).toISOString(),
+    duration_minutes: 60,
+    capacity: 4,
+    min_level: 'beginner',
+    max_level: 'advanced',
+    gender_condition: 'any',
+    age_min: null,
+    age_max: null,
+    status: 'recruiting',
+    participants: [{ count: 2 }],
+    created_at: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(),
+  },
+  {
+    id: 'spark-near-4',
+    host_id: 'u1',
+    host: MOCK_PROFILES[0],
+    sport_id: 's2',
+    sport: MOCK_SPORTS[1],
+    title: '남대문 시장 둘레 자전거 라이딩',
+    description: '시내 야경 보면서 가볍게 라이딩해요. 입문자도 환영!',
+    place_name: '남대문시장 입구',
+    address: '서울 중구 남대문로',
+    latitude: 37.5303,
+    longitude: 126.9779,
+    scheduled_at: new Date(Date.now() + 31 * 60 * 60 * 1000).toISOString(),
+    duration_minutes: 70,
+    capacity: 5,
+    min_level: 'beginner',
+    max_level: null,
+    gender_condition: 'any',
+    age_min: null,
+    age_max: null,
+    status: 'recruiting',
+    participants: [{ count: 3 }],
+    created_at: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
+  },
+]
+
+// id로 mock 번개를 찾을 때는 항상 이 합본을 사용한다 — MOCK_NEARBY_SPARKS만 따로 찾으면 누락된다.
+export const ALL_MOCK_SPARKS = [...MOCK_SPARKS, ...MOCK_NEARBY_SPARKS]
+
+// mock 번개는 participants가 [{count}] 요약 형태라 상세/세션 화면(모임장·모임원 목록)에는
+// 그대로 쓸 수 없다. 화면에 진짜처럼 보이는 호스트+멤버 더미 리스트를 만들어준다.
+export function buildMockParticipants(spark: { id: string; host_id: string; capacity: number; participants?: { count: number }[] }) {
+  const host = MOCK_PROFILES.find(p => p.id === spark.host_id) ?? MOCK_PROFILES[0]
+  const others = MOCK_PROFILES.filter(p => p.id !== host.id)
+  const slots = Math.max(0, spark.capacity - 1)
+  // 참여자 리스트가 항상 비어 보이지 않도록 최소 3명(호스트 제외)은 참여 확정으로 채운다.
+  const approvedCount = Math.min(slots, Math.max(3, (spark.participants?.[0]?.count ?? 1) - 1), others.length)
+  const pendingCount = Math.min(Math.max(0, slots - approvedCount), Math.max(0, others.length - approvedCount), 2)
+
+  const now = Date.now()
+  const toProfile = (p: typeof host) => ({
+    id: p.id, nickname: p.nickname, avatar_url: p.avatar_url, exercise_level: p.exercise_level,
+    gender: p.gender, birth_year: p.birth_year,
+  })
+
+  const approvedMembers = others.slice(0, approvedCount)
+  const pendingMembers = others.slice(approvedCount, approvedCount + pendingCount)
+
+  return [
+    {
+      id: `${spark.id}-p-host`,
+      user_id: host.id,
+      role: 'host' as const,
+      status: 'approved' as const,
+      checked_in: true,
+      requested_at: new Date(now - 5 * 60 * 60 * 1000).toISOString(),
+      approved_at: new Date(now - 5 * 60 * 60 * 1000).toISOString(),
+      profile: toProfile(host),
+    },
+    ...approvedMembers.map((m, i) => ({
+      id: `${spark.id}-p-${i}`,
+      user_id: m.id,
+      role: 'member' as const,
+      status: 'approved' as const,
+      // 같이 운동 준비 화면에서 "참여 완료(접속 중)"와 "아직 안 옴"을 구분해 보여주기 위한 더미 플래그.
+      checked_in: i % 2 === 0,
+      requested_at: new Date(now - (4 - i) * 60 * 60 * 1000).toISOString(),
+      approved_at: new Date(now - (3.5 - i) * 60 * 60 * 1000).toISOString(),
+      profile: toProfile(m),
+    })),
+    ...pendingMembers.map((m, i) => ({
+      id: `${spark.id}-pending-${i}`,
+      user_id: m.id,
+      role: 'member' as const,
+      status: 'requested' as const,
+      checked_in: false,
+      requested_at: new Date(now - (1 - i * 0.5) * 60 * 60 * 1000).toISOString(),
+      approved_at: null,
+      profile: toProfile(m),
+    })),
+  ]
+}
+
+// 실제 DB 번개(테스트로 직접 만든 번개 포함)는 참여자가 거의 없는 경우가 많아
+// 번개 관리 화면이 항상 비어 보인다. 호스트 자신을 제외하고 참여자가 3명 미만이면
+// mock 유저로 신청자/확정자를 보충한다. 보충된 행은 id가 `${sparkId}-supp-`로 시작해
+// 화면에서 "실제 DB 행이 아니므로 로컬 상태만 갱신"하도록 구분할 수 있다.
+export function supplementParticipants<
+  T extends { id: string; user_id: string; role: string; status: string; requested_at: string; approved_at: string | null }
+>(real: T[], spark: { id: string; host_id: string; capacity: number }): T[] {
+  const realNonHost = real.filter(p => p.role !== 'host')
+  const usedUserIds = new Set(real.map(p => p.user_id))
+  const pool = MOCK_PROFILES.filter(p => p.id !== spark.host_id && !usedUserIds.has(p.id))
+  const slots = Math.max(0, spark.capacity - 1)
+
+  const approvedNeeded = Math.max(0, Math.min(3, slots) - realNonHost.filter(p => p.status === 'approved' || p.status === 'attended').length)
+  const pendingNeeded = Math.max(0, Math.min(2, Math.max(0, slots - realNonHost.length)) - realNonHost.filter(p => p.status === 'requested').length)
+
+  const now = Date.now()
+  const toProfile = (p: (typeof MOCK_PROFILES)[number]) => ({
+    id: p.id, nickname: p.nickname, avatar_url: p.avatar_url, exercise_level: p.exercise_level,
+    gender: p.gender, birth_year: p.birth_year,
+  })
+
+  const approvedFill = pool.slice(0, approvedNeeded)
+  const pendingFill = pool.slice(approvedNeeded, approvedNeeded + pendingNeeded)
+
+  const extra = [
+    ...approvedFill.map((m, i) => ({
+      id: `${spark.id}-supp-a${i}`,
+      user_id: m.id,
+      role: 'member',
+      status: 'approved',
+      checked_in: i % 2 === 0,
+      requested_at: new Date(now - (4 - i) * 60 * 60 * 1000).toISOString(),
+      approved_at: new Date(now - (3.5 - i) * 60 * 60 * 1000).toISOString(),
+      profile: toProfile(m),
+    })),
+    ...pendingFill.map((m, i) => ({
+      id: `${spark.id}-supp-p${i}`,
+      user_id: m.id,
+      role: 'member',
+      status: 'requested',
+      checked_in: false,
+      requested_at: new Date(now - (1 - i * 0.5) * 60 * 60 * 1000).toISOString(),
+      approved_at: null,
+      profile: toProfile(m),
+    })),
+  ] as unknown as T[]
+
+  return [...real, ...extra]
+}
+
 export const MOCK_EXERCISE_SESSIONS = [
   {
     id: 'ex1',
@@ -206,6 +456,132 @@ export const MOCK_EXERCISE_SESSIONS = [
     duration_seconds: 3000,
     distance_meters: 8100,
     calories: 480,
+    status: 'completed',
+  },
+  {
+    id: 'ex4',
+    user_id: 'u1',
+    sport_id: 's2',
+    sport: MOCK_SPORTS[1],
+    mode: 'solo',
+    title: '저녁 자전거 라이딩',
+    started_at: new Date(Date.now() - 9 * 24 * 60 * 60 * 1000).toISOString(),
+    ended_at: new Date(Date.now() - 9 * 24 * 60 * 60 * 1000 + 70 * 60 * 1000).toISOString(),
+    duration_seconds: 4200,
+    distance_meters: 18500,
+    calories: 560,
+    status: 'completed',
+  },
+  {
+    id: 'ex5',
+    user_id: 'u1',
+    sport_id: 's7',
+    sport: MOCK_SPORTS[6],
+    mode: 'spark',
+    title: '동네 배드민턴 번개',
+    started_at: new Date(Date.now() - 12 * 24 * 60 * 60 * 1000).toISOString(),
+    ended_at: new Date(Date.now() - 12 * 24 * 60 * 60 * 1000 + 80 * 60 * 1000).toISOString(),
+    duration_seconds: 4800,
+    distance_meters: null,
+    calories: 410,
+    status: 'completed',
+  },
+  {
+    id: 'ex6',
+    user_id: 'u1',
+    sport_id: 's8',
+    sport: MOCK_SPORTS[7],
+    mode: 'solo',
+    title: '아침 수영',
+    started_at: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString(),
+    ended_at: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000 + 40 * 60 * 1000).toISOString(),
+    duration_seconds: 2400,
+    distance_meters: 1200,
+    calories: 380,
+    status: 'completed',
+  },
+  {
+    id: 'ex7',
+    user_id: 'u1',
+    sport_id: 's9',
+    sport: MOCK_SPORTS[8],
+    mode: 'solo',
+    title: '북악산 등산',
+    started_at: new Date(Date.now() - 20 * 24 * 60 * 60 * 1000).toISOString(),
+    ended_at: new Date(Date.now() - 20 * 24 * 60 * 60 * 1000 + 150 * 60 * 1000).toISOString(),
+    duration_seconds: 9000,
+    distance_meters: 7400,
+    calories: 720,
+    status: 'completed',
+  },
+  {
+    id: 'ex8',
+    user_id: 'u1',
+    sport_id: 's10',
+    sport: MOCK_SPORTS[9],
+    mode: 'solo',
+    title: '저녁 요가',
+    started_at: new Date(Date.now() - 25 * 24 * 60 * 60 * 1000).toISOString(),
+    ended_at: new Date(Date.now() - 25 * 24 * 60 * 60 * 1000 + 35 * 60 * 1000).toISOString(),
+    duration_seconds: 2100,
+    distance_meters: null,
+    calories: 180,
+    status: 'completed',
+  },
+  {
+    id: 'ex9',
+    user_id: 'u1',
+    sport_id: 's3',
+    sport: MOCK_SPORTS[2],
+    mode: 'spark',
+    title: '강남 헬스장 파트너 운동',
+    started_at: new Date(Date.now() - 33 * 24 * 60 * 60 * 1000).toISOString(),
+    ended_at: new Date(Date.now() - 33 * 24 * 60 * 60 * 1000 + 65 * 60 * 1000).toISOString(),
+    duration_seconds: 3900,
+    distance_meters: null,
+    calories: 470,
+    status: 'completed',
+  },
+  {
+    id: 'ex10',
+    user_id: 'u1',
+    sport_id: 's1',
+    sport: MOCK_SPORTS[0],
+    mode: 'solo',
+    title: '주말 장거리 러닝',
+    started_at: new Date(Date.now() - 48 * 24 * 60 * 60 * 1000).toISOString(),
+    ended_at: new Date(Date.now() - 48 * 24 * 60 * 60 * 1000 + 95 * 60 * 1000).toISOString(),
+    duration_seconds: 5700,
+    distance_meters: 15200,
+    calories: 820,
+    status: 'completed',
+  },
+  {
+    id: 'ex11',
+    user_id: 'u1',
+    sport_id: 's6',
+    sport: MOCK_SPORTS[5],
+    mode: 'spark',
+    title: '테니스 복식 번개',
+    started_at: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString(),
+    ended_at: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000 + 75 * 60 * 1000).toISOString(),
+    duration_seconds: 4500,
+    distance_meters: null,
+    calories: 430,
+    status: 'completed',
+  },
+  {
+    id: 'ex12',
+    user_id: 'u1',
+    sport_id: 's2',
+    sport: MOCK_SPORTS[1],
+    mode: 'solo',
+    title: '한강 자전거 라이딩',
+    started_at: new Date(Date.now() - 75 * 24 * 60 * 60 * 1000).toISOString(),
+    ended_at: new Date(Date.now() - 75 * 24 * 60 * 60 * 1000 + 55 * 60 * 1000).toISOString(),
+    duration_seconds: 3300,
+    distance_meters: 14000,
+    calories: 510,
     status: 'completed',
   },
 ]
@@ -347,7 +723,7 @@ export const MOCK_USER_PROFILE = {
   gender: null,
   birth_year: 1995,
   exercise_level: 'intermediate',
-  trust_score: 82,
+  trust_score: 85,
   preferred_sports: ['s1', 's3', 's9'],
   workout_traits: ['꾸준함', '새벽형'],
   activity_area: '마포구',

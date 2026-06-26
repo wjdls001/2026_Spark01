@@ -14,5 +14,5 @@ export const SPARK_FILTER_RADIUS_KEY = 'spark_filter_radius_km'
 
 export function getFilterRadiusKm() {
   const stored = localStorage.getItem(SPARK_FILTER_RADIUS_KEY)
-  return stored ? Number(stored) : 10
+  return stored ? Number(stored) : 5
 }

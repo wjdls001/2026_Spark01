@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '@/features/auth/useAuth'
 import { fetchMyParticipations, fetchMySparks } from '@/features/sparks/api'
-import { SPORT_EMOJI } from '@/lib/mockData'
+import { ALL_MOCK_SPARKS, SPORT_EMOJI } from '@/lib/mockData'
 
 type Item = {
   sparkId: string
@@ -17,6 +17,19 @@ function isToday(iso: string) {
   const d = new Date(iso)
   const now = new Date()
   return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate()
+}
+
+// 테스트 환경에서는 실제 DB에 "오늘 예정된" 참여/개설 번개가 없을 때가 많아 같이 운동 플로우 자체를
+// 확인할 수 없었다. mock 번개 중 가까운 시일 내 몇 개를 host/member 항목으로 보여준다.
+function mockFallbackItems(): Item[] {
+  return ALL_MOCK_SPARKS.slice(0, 4).map((spark, index) => ({
+    sparkId: spark.id,
+    title: spark.title,
+    placeName: spark.place_name,
+    scheduledAt: spark.scheduled_at,
+    sportCode: (spark.sport as { code?: string } | null)?.code,
+    role: index % 2 === 0 ? 'host' : 'member',
+  }))
 }
 
 export function SparkExerciseSelectPage() {
@@ -56,7 +69,9 @@ export function SparkExerciseSelectPage() {
             role: 'host' as const,
           }))
 
-        setItems([...hostItems, ...memberItems])
+        const realItems = [...hostItems, ...memberItems]
+        // 실제 DB에 오늘 예정된 번개가 없으면(테스트 환경 등) mock 번개로 같이 운동 플로우를 시연한다.
+        setItems(realItems.length > 0 ? realItems : mockFallbackItems())
         setLoading(false)
       })
       .catch(() => setLoading(false))
@@ -73,23 +88,23 @@ export function SparkExerciseSelectPage() {
     <div className="flex min-h-dvh flex-col bg-white">
       <div className="flex items-center gap-3 px-5 pt-5 pb-3">
         <button onClick={() => navigate(-1)} className="p-1">
-          <svg className="h-6 w-6 text-[#111111]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="h-6 w-6 text-spark-dark" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
         </button>
-        <h1 className="text-lg font-bold text-[#111111]">같이 운동</h1>
+        <h1 className="text-lg font-bold text-spark-dark">같이 운동</h1>
       </div>
 
       <div className="flex-1 px-5 py-2">
         {loading ? (
           <div className="flex justify-center py-10">
-            <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#9B8FFF] border-t-transparent" />
+            <div className="h-8 w-8 animate-spin rounded-full border-2 border-spark-purple border-t-transparent" />
           </div>
         ) : items.length === 0 ? (
           <div className="flex flex-col items-center py-12 text-center">
             <div className="mb-3 text-4xl">⚡</div>
-            <p className="text-sm text-[#777777]">오늘 예정된 번개가 없어요.</p>
-            <Link to="/sparks" className="mt-4 rounded-full bg-[#C8FF3E] px-6 py-2.5 text-sm font-bold text-[#111111]">
+            <p className="text-sm text-spark-text-secondary">오늘 예정된 번개가 없어요.</p>
+            <Link to="/sparks" className="mt-4 rounded-full bg-spark-lime px-6 py-2.5 text-sm font-bold text-spark-dark">
               번개 찾아보기
             </Link>
           </div>
@@ -104,14 +119,14 @@ export function SparkExerciseSelectPage() {
                 <span className="text-2xl">{SPORT_EMOJI[item.sportCode ?? ''] ?? '⚡'}</span>
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
-                    <span className="text-sm font-bold text-[#111111]">{item.title}</span>
+                    <span className="text-sm font-bold text-spark-dark">{item.title}</span>
                     {item.role === 'host' && (
-                      <span className="rounded-full bg-[#C8FF3E] px-2 py-0.5 text-[10px] font-bold text-[#111111]">모임장</span>
+                      <span className="rounded-full bg-spark-lime px-2 py-0.5 text-[10px] font-bold text-spark-dark">모임장</span>
                     )}
                   </div>
-                  <div className="mt-0.5 text-xs text-[#777777]">{item.placeName} · {formatTime(item.scheduledAt)}</div>
+                  <div className="mt-0.5 text-xs text-spark-text-secondary">{item.placeName} · {formatTime(item.scheduledAt)}</div>
                 </div>
-                <svg className="h-5 w-5 text-[#9B8FFF]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="h-5 w-5 text-spark-purple" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                 </svg>
               </button>

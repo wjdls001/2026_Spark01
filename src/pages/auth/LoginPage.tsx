@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '@/lib/supabase/client'
+import { checkOnboardingCompleted } from '@/features/mypage/api'
+import sparkLogo from '@/assets/spark-logo.png'
 
 // TEST-ONLY: 실제 OAuth provider 설정 전까지 소셜 로그인 버튼이 즉시 로그인되도록 연결해둔 데모 계정.
 const DEMO_OAUTH_ACCOUNTS: Record<'apple' | 'google' | 'kakao', { email: string; password: string }> = {
@@ -35,8 +37,8 @@ export function LoginPage() {
     }
     const { data: { user } } = await supabase.auth.getUser()
     if (user) {
-      const { data: profile } = await supabase.from('profiles').select('id').eq('id', user.id).single()
-      navigate(profile ? '/home' : '/onboarding/terms', { replace: true })
+      const { completed } = await checkOnboardingCompleted(user.id)
+      navigate(completed ? '/home' : '/onboarding/terms', { replace: true })
     }
     setLoading(false)
   }
@@ -66,8 +68,8 @@ export function LoginPage() {
     } else {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
-      const { data: profile } = await supabase.from('profiles').select('id').eq('id', user.id).single()
-      navigate(profile ? '/home' : '/onboarding/terms', { replace: true })
+      const { completed } = await checkOnboardingCompleted(user.id)
+      navigate(completed ? '/home' : '/onboarding/terms', { replace: true })
     }
     setLoading(false)
   }
@@ -77,11 +79,9 @@ export function LoginPage() {
       {/* 상단 브랜드 영역 */}
       <div className="flex flex-1 flex-col items-center justify-center px-8 pt-16 pb-8">
         {/* 로고 */}
-        <div className="mb-2 flex h-20 w-20 items-center justify-center rounded-3xl bg-[#C8FF3E] shadow-lg">
-          <span className="text-4xl">⚡</span>
-        </div>
-        <h1 className="mt-4 text-3xl font-black text-[#111111]">SPARK</h1>
-        <p className="mt-2 text-center text-sm text-[#777777] leading-relaxed">
+        <img src={sparkLogo} alt="SPARK" className="mb-2 h-20 w-[71px] object-contain drop-shadow-lg" />
+        <h1 className="mt-4 text-3xl font-black text-spark-dark">SPARK</h1>
+        <p className="mt-2 text-center text-sm text-spark-text-secondary leading-relaxed">
           운동의 시작<br />이웃과 함께 불씨를 키워보세요
         </p>
 
@@ -92,7 +92,7 @@ export function LoginPage() {
               <button
                 onClick={() => handleOAuthLogin('apple')}
                 disabled={loading}
-                className="flex w-full items-center justify-center gap-3 rounded-full bg-[#111111] py-3.5 text-sm font-bold text-white disabled:opacity-60"
+                className="flex w-full items-center justify-center gap-3 rounded-full bg-spark-dark py-3.5 text-sm font-bold text-white disabled:opacity-60"
               >
                 <AppleIcon />
                 Apple로 시작하기
@@ -102,7 +102,7 @@ export function LoginPage() {
               <button
                 onClick={() => handleOAuthLogin('google')}
                 disabled={loading}
-                className="flex w-full items-center justify-center gap-3 rounded-full border border-gray-200 bg-white py-3.5 text-sm font-bold text-[#111111] disabled:opacity-60"
+                className="flex w-full items-center justify-center gap-3 rounded-full border border-gray-200 bg-white py-3.5 text-sm font-bold text-spark-dark disabled:opacity-60"
               >
                 <GoogleIcon />
                 Google로 시작하기
@@ -112,7 +112,7 @@ export function LoginPage() {
               <button
                 onClick={() => handleOAuthLogin('kakao')}
                 disabled={loading}
-                className="flex w-full items-center justify-center gap-3 rounded-full bg-[#FEE500] py-3.5 text-sm font-bold text-[#111111] disabled:opacity-60"
+                className="flex w-full items-center justify-center gap-3 rounded-full bg-[#FEE500] py-3.5 text-sm font-bold text-spark-dark disabled:opacity-60"
               >
                 <KakaoIcon />
                 카카오로 시작하기
@@ -122,14 +122,14 @@ export function LoginPage() {
 
               <div className="relative my-2 flex items-center gap-3">
                 <div className="h-px flex-1 bg-gray-200" />
-                <span className="text-xs text-[#999999]">또는</span>
+                <span className="text-xs text-spark-gray">또는</span>
                 <div className="h-px flex-1 bg-gray-200" />
               </div>
 
               {/* 이메일 로그인 */}
               <button
                 onClick={() => setShowEmailForm(true)}
-                className="flex w-full items-center justify-center gap-2 rounded-full border border-gray-200 py-3.5 text-sm font-medium text-[#555555]"
+                className="flex w-full items-center justify-center gap-2 rounded-full border border-gray-200 py-3.5 text-sm font-medium text-spark-text-secondary"
               >
                 <span>✉️</span>
                 이메일로 로그인
@@ -140,7 +140,7 @@ export function LoginPage() {
               <button
                 type="button"
                 onClick={() => setShowEmailForm(false)}
-                className="mb-2 flex items-center gap-1 text-sm text-[#777777]"
+                className="mb-2 flex items-center gap-1 text-sm text-spark-text-secondary"
               >
                 ← 뒤로
               </button>
@@ -149,49 +149,49 @@ export function LoginPage() {
                 <button
                   type="button"
                   onClick={() => { setMode('login'); setError('') }}
-                  className={`flex-1 rounded-full py-1.5 text-sm font-medium transition-colors ${mode === 'login' ? 'bg-white text-[#111111] shadow-sm' : 'text-[#777777]'}`}
+                  className={`flex-1 rounded-full py-1.5 text-sm font-medium transition-colors ${mode === 'login' ? 'bg-white text-spark-dark shadow-sm' : 'text-spark-text-secondary'}`}
                 >
                   로그인
                 </button>
                 <button
                   type="button"
                   onClick={() => { setMode('signup'); setError('') }}
-                  className={`flex-1 rounded-full py-1.5 text-sm font-medium transition-colors ${mode === 'signup' ? 'bg-white text-[#111111] shadow-sm' : 'text-[#777777]'}`}
+                  className={`flex-1 rounded-full py-1.5 text-sm font-medium transition-colors ${mode === 'signup' ? 'bg-white text-spark-dark shadow-sm' : 'text-spark-text-secondary'}`}
                 >
                   회원가입
                 </button>
               </div>
 
               <div>
-                <label className="mb-1 block text-xs font-medium text-[#555555]">이메일</label>
+                <label className="mb-1 block text-xs font-medium text-spark-text-secondary">이메일</label>
                 <input
                   type="email" value={email} onChange={e => setEmail(e.target.value)}
                   placeholder="이메일을 입력하세요" required
-                  className="w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm outline-none focus:border-[#9B8FFF] focus:bg-white"
+                  className="w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm outline-none focus:border-spark-purple focus:bg-white"
                 />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-[#555555]">비밀번호</label>
+                <label className="mb-1 block text-xs font-medium text-spark-text-secondary">비밀번호</label>
                 <input
                   type="password" value={password} onChange={e => setPassword(e.target.value)}
                   placeholder={mode === 'signup' ? '6자 이상 입력하세요' : '비밀번호를 입력하세요'} required
-                  className="w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm outline-none focus:border-[#9B8FFF] focus:bg-white"
+                  className="w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm outline-none focus:border-spark-purple focus:bg-white"
                 />
               </div>
               {mode === 'signup' && (
                 <div>
-                  <label className="mb-1 block text-xs font-medium text-[#555555]">비밀번호 확인</label>
+                  <label className="mb-1 block text-xs font-medium text-spark-text-secondary">비밀번호 확인</label>
                   <input
                     type="password" value={confirm} onChange={e => setConfirm(e.target.value)}
                     placeholder="비밀번호를 한 번 더 입력하세요" required
-                    className="w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm outline-none focus:border-[#9B8FFF] focus:bg-white"
+                    className="w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm outline-none focus:border-spark-purple focus:bg-white"
                   />
                 </div>
               )}
               {error && <p className="text-xs text-red-500">{error}</p>}
               <button
                 type="submit" disabled={loading}
-                className="w-full rounded-full bg-[#C8FF3E] py-4 text-base font-bold text-[#111111] disabled:opacity-60"
+                className="w-full rounded-full bg-spark-lime py-4 text-base font-bold text-spark-dark disabled:opacity-60"
               >
                 {loading ? (mode === 'signup' ? '가입 중...' : '로그인 중...') : (mode === 'signup' ? '회원가입' : '로그인')}
               </button>
@@ -201,7 +201,7 @@ export function LoginPage() {
       </div>
 
       {/* 하단 약관 */}
-      <div className="px-8 pb-8 text-center text-[11px] text-[#BBBBBB] leading-relaxed">
+      <div className="px-8 pb-8 text-center text-[11px] text-spark-gray leading-relaxed">
         로그인 시 SPARK의{' '}
         <span className="underline">이용약관</span>과{' '}
         <span className="underline">개인정보 처리방침</span>에<br />
@@ -214,7 +214,7 @@ export function LoginPage() {
 function KakaoIcon() {
   return (
     <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-      <path d="M9 1.5C4.86 1.5 1.5 4.14 1.5 7.38c0 2.1 1.38 3.93 3.48 4.98L4.2 15l3.3-2.16c.48.06.99.09 1.5.09 4.14 0 7.5-2.64 7.5-5.88S13.14 1.5 9 1.5z" fill="#111111"/>
+      <path d="M9 1.5C4.86 1.5 1.5 4.14 1.5 7.38c0 2.1 1.38 3.93 3.48 4.98L4.2 15l3.3-2.16c.48.06.99.09 1.5.09 4.14 0 7.5-2.64 7.5-5.88S13.14 1.5 9 1.5z" fill="currentColor"/>
     </svg>
   )
 }

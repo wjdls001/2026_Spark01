@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/features/auth/useAuth'
 import { saveTermsAgreements } from '@/features/mypage/api'
+import sparkLogo from '@/assets/spark-logo.png'
 
 export function OnboardingTermsPage() {
   const navigate = useNavigate()
@@ -40,8 +41,11 @@ export function OnboardingTermsPage() {
   return (
     <div className="flex min-h-dvh flex-col bg-gradient-to-br from-white via-[#E8E0FF] to-[#FFF8D6] px-6 py-8">
       <div className="mb-8">
-        <div className="mb-1 text-2xl font-bold text-[#111111]">⚡ SPARK</div>
-        <h1 className="mt-6 text-xl font-bold text-[#111111]">서비스 이용을 위해<br />약관에 동의해주세요</h1>
+        <div className="mb-1 flex items-center gap-1.5 text-2xl font-bold text-spark-dark">
+          <img src={sparkLogo} alt="" className="h-6 w-[21px] object-contain" />
+          SPARK
+        </div>
+        <h1 className="mt-6 text-xl font-bold text-spark-dark">서비스 이용을 위해<br />약관에 동의해주세요</h1>
       </div>
 
       <div className="flex flex-col gap-3">
@@ -49,9 +53,9 @@ export function OnboardingTermsPage() {
           <input
             type="checkbox" checked={allChecked}
             onChange={e => handleAll(e.target.checked)}
-            className="h-5 w-5 accent-[#9B8FFF]"
+            className="h-5 w-5 accent-spark-purple"
           />
-          <span className="text-base font-bold text-[#111111]">전체 동의</span>
+          <span className="text-base font-bold text-spark-dark">전체 동의</span>
         </label>
 
         <div className="flex flex-col gap-2 rounded-2xl bg-white px-4 py-4 shadow-[0_2px_12px_rgba(0,0,0,0.08)]">
@@ -77,7 +81,7 @@ export function OnboardingTermsPage() {
         <button
           onClick={handleNext}
           disabled={!canProceed || loading}
-          className="w-full rounded-full bg-[#C8FF3E] py-4 text-base font-bold text-[#111111] disabled:opacity-40"
+          className="w-full rounded-full bg-spark-lime py-4 text-base font-bold text-spark-dark disabled:opacity-40"
         >
           {loading ? '처리 중...' : '동의하고 시작하기'}
         </button>
@@ -92,7 +96,7 @@ function TermsItem({ label, checked, onChange }: { label: string; checked: boole
       <input
         type="checkbox" checked={checked}
         onChange={e => onChange(e.target.checked)}
-        className="h-4 w-4 accent-[#9B8FFF]"
+        className="h-4 w-4 accent-spark-purple"
       />
       <span className="text-sm text-[#333333]">{label}</span>
     </label>

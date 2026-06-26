@@ -15,7 +15,7 @@ export function ProfileVisibilitySettingsPage() {
     <div className="flex min-h-dvh flex-col">
       <SettingsSubpageHeader title="프로필 공개" />
       <div className="flex-1 px-5 py-5">
-        <p className="mb-4 text-sm text-[#777777]">번개 모임에서 다른 사용자에게 내 프로필이 보이는 범위를 설정해요.</p>
+        <p className="mb-4 text-sm text-spark-text-secondary">번개 모임에서 다른 사용자에게 내 프로필이 보이는 범위를 설정해요.</p>
         <div className="flex flex-col gap-3">
           {[
             { v: 'public', label: '전체 공개', desc: '모든 사용자에게 프로필이 보여요' },
@@ -25,11 +25,11 @@ export function ProfileVisibilitySettingsPage() {
               key={opt.v}
               onClick={() => select(opt.v)}
               className={`rounded-2xl border-2 px-4 py-3.5 text-left ${
-                visibility === opt.v ? 'border-[#9B8FFF] bg-[#EEE8FF]' : 'border-gray-100 bg-gray-50'
+                visibility === opt.v ? 'border-spark-purple bg-spark-soft-purple' : 'border-gray-100 bg-gray-50'
               }`}
             >
-              <div className="font-bold text-[#111111]">{opt.label}</div>
-              <div className="mt-0.5 text-xs text-[#777777]">{opt.desc}</div>
+              <div className="font-bold text-spark-dark">{opt.label}</div>
+              <div className="mt-0.5 text-xs text-spark-text-secondary">{opt.desc}</div>
             </button>
           ))}
         </div>

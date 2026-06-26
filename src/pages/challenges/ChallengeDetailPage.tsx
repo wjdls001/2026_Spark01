@@ -54,7 +54,7 @@ export function ChallengeDetailPage() {
   if (!challenge) {
     return (
       <div className="flex min-h-dvh items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#9B8FFF] border-t-transparent" />
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-spark-purple border-t-transparent" />
       </div>
     )
   }
@@ -69,25 +69,25 @@ export function ChallengeDetailPage() {
     <div className="flex min-h-dvh flex-col bg-white">
       <div className="flex items-center gap-3 px-5 py-4 shadow-sm">
         <button onClick={() => navigate(-1)}>
-          <svg className="h-6 w-6 text-[#111111]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="h-6 w-6 text-spark-dark" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
         </button>
-        <h1 className="text-lg font-bold text-[#111111]">{isEvent ? '이벤트 상세' : '챌린지 상세'}</h1>
+        <h1 className="text-lg font-bold text-spark-dark">{isEvent ? '이벤트 상세' : '챌린지 상세'}</h1>
       </div>
 
       <div className="flex-1 overflow-y-auto px-5 py-4">
-        <h2 className="mb-2 text-xl font-bold text-[#111111]">{challenge.title}</h2>
-        {challenge.description && <p className="mb-4 text-sm text-[#555555]">{challenge.description}</p>}
+        <h2 className="mb-2 text-xl font-bold text-spark-dark">{challenge.title}</h2>
+        {challenge.description && <p className="mb-4 text-sm text-spark-text-secondary">{challenge.description}</p>}
 
         {!isEvent && (
           <div className="mb-5">
-            <div className="mb-1 flex items-center justify-between text-xs text-[#777777]">
+            <div className="mb-1 flex items-center justify-between text-xs text-spark-text-secondary">
               <span>달성 {challenge.progress?.current_count ?? 0} / {challenge.goal_count}</span>
-              <span className="font-medium text-[#9B8FFF]">{pct}%</span>
+              <span className="font-medium text-spark-purple">{pct}%</span>
             </div>
             <div className="h-2 w-full overflow-hidden rounded-full bg-gray-100">
-              <div className="h-full rounded-full bg-[#9B8FFF]" style={{ width: `${pct}%` }} />
+              <div className="h-full rounded-full bg-spark-purple" style={{ width: `${pct}%` }} />
             </div>
           </div>
         )}
@@ -95,14 +95,14 @@ export function ChallengeDetailPage() {
         <button
           onClick={handleJoin}
           disabled={joining || joined}
-          className="mb-5 w-full rounded-full bg-[#9B8FFF] py-3 text-sm font-bold text-white disabled:opacity-60"
+          className="mb-5 w-full rounded-full bg-spark-purple py-3 text-sm font-bold text-white disabled:opacity-60"
         >
           {joined ? '참여 중' : joining ? '참여 중...' : '참여하기'}
         </button>
 
-        <div className="mb-5 rounded-xl bg-[#111111] px-4 py-3 text-center">
-          <span className="text-[#C8FF3E] font-bold">+{challenge.reward_xp} XP</span>
-          <span className="ml-2 text-[#AAAAAA] text-sm">완료 보상</span>
+        <div className="mb-5 rounded-xl bg-spark-dark px-4 py-3 text-center">
+          <span className="text-spark-lime font-bold">+{challenge.reward_xp} XP</span>
+          <span className="ml-2 text-spark-gray text-sm">완료 보상</span>
         </div>
 
         {isEvent && (
@@ -113,14 +113,14 @@ export function ChallengeDetailPage() {
                 <div className="flex items-center gap-2">
                   <span className="text-lg">{i === 0 ? '🥇' : '🥈'}</span>
                   <div>
-                    <p className="text-xs font-bold text-[#111111]">{r.rank}</p>
-                    <p className="text-xs text-[#555555]">{r.desc}</p>
+                    <p className="text-xs font-bold text-spark-dark">{r.rank}</p>
+                    <p className="text-xs text-spark-text-secondary">{r.desc}</p>
                   </div>
                 </div>
               </div>
             ))}
             {challenge.event_date && (
-              <div className="mt-3 rounded-xl bg-[#EEE8FF] p-3 text-xs text-[#555555]">
+              <div className="mt-3 rounded-xl bg-spark-soft-purple p-3 text-xs text-spark-text-secondary">
                 <p>일시: {challenge.event_date}</p>
                 {challenge.event_place && <p>장소: {challenge.event_place}</p>}
               </div>
@@ -129,7 +129,7 @@ export function ChallengeDetailPage() {
         )}
 
         {challenge.ends_at && (
-          <p className="mt-4 text-xs text-[#BBBBBB]">마감: {new Date(challenge.ends_at).toLocaleDateString('ko-KR')}</p>
+          <p className="mt-4 text-xs text-spark-gray">마감: {new Date(challenge.ends_at).toLocaleDateString('ko-KR')}</p>
         )}
       </div>
     </div>

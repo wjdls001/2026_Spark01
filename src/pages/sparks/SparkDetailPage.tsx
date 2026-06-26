@@ -1,16 +1,23 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/features/auth/useAuth'
-import { fetchSparkById, applyToSpark } from '@/features/sparks/api'
+import { fetchSparkById, applyToSpark, cancelParticipation } from '@/features/sparks/api'
 import { MapView } from '@/features/map/MapView'
-import { MOCK_SPARKS, SPORT_EMOJI } from '@/lib/mockData'
+import { ALL_MOCK_SPARKS, buildMockParticipants, SPORT_EMOJI } from '@/lib/mockData'
+import { SparkCharacter } from '@/components/common/SparkCharacter'
+import { ConfirmModal } from '@/components/common/ConfirmModal'
+import { Toast } from '@/components/common/Toast'
+import { useToast } from '@/lib/utils/useToast'
+import { exerciseLevelLabel } from '@/lib/utils/level'
+
+const GENDER_LABEL: Record<string, string> = { male: '남성', female: '여성', other: '이외' }
 
 type ParticipantWithProfile = {
   id: string
   user_id: string
   role: string
   status: string
-  profile: { id: string; nickname: string; avatar_url: string | null; exercise_level: string } | null
+  profile: { id: string; nickname: string; avatar_url: string | null; exercise_level: string; gender?: string | null; birth_year?: number | null } | null
 }
 
 type SparkDetail = {
@@ -42,6 +49,10 @@ export function SparkDetailPage() {
   const [loading, setLoading] = useState(true)
   const [applying, setApplying] = useState(false)
   const [error, setError] = useState('')
+  const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false)
+  const [canceling, setCanceling] = useState(false)
+  const [isMock, setIsMock] = useState(false)
+  const toast = useToast()
 
   useEffect(() => {
     if (!sparkId) return
@@ -49,15 +60,18 @@ export function SparkDetailPage() {
       .then(({ data }) => {
         if (data) {
           setSpark(data as unknown as SparkDetail)
+          setIsMock(false)
         } else {
-          const mock = MOCK_SPARKS.find(s => s.id === sparkId)
-          if (mock) setSpark(mock as unknown as SparkDetail)
+          const mock = ALL_MOCK_SPARKS.find(s => s.id === sparkId)
+          if (mock) setSpark({ ...mock, participants: buildMockParticipants(mock) } as unknown as SparkDetail)
+          setIsMock(true)
         }
         setLoading(false)
       })
       .catch(() => {
-        const mock = MOCK_SPARKS.find(s => s.id === sparkId)
-        if (mock) setSpark(mock as unknown as SparkDetail)
+        const mock = ALL_MOCK_SPARKS.find(s => s.id === sparkId)
+        if (mock) setSpark({ ...mock, participants: buildMockParticipants(mock) } as unknown as SparkDetail)
+        setIsMock(true)
         setLoading(false)
       })
   }, [sparkId])
@@ -65,7 +79,7 @@ export function SparkDetailPage() {
   if (loading) {
     return (
       <div className="flex min-h-dvh items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#9B8FFF] border-t-transparent" />
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-spark-purple border-t-transparent" />
       </div>
     )
   }
@@ -73,8 +87,8 @@ export function SparkDetailPage() {
   if (!spark) {
     return (
       <div className="flex min-h-dvh flex-col items-center justify-center px-5">
-        <p className="text-[#777777]">번개를 찾을 수 없어요.</p>
-        <button onClick={() => navigate(-1)} className="mt-4 text-[#9B8FFF]">뒤로 가기</button>
+        <p className="text-spark-text-secondary">번개를 찾을 수 없어요.</p>
+        <button onClick={() => navigate(-1)} className="mt-4 text-spark-purple">뒤로 가기</button>
       </div>
     )
   }
@@ -92,21 +106,61 @@ export function SparkDetailPage() {
   const emoji = SPORT_EMOJI[sportCode] ?? '⚡'
 
   async function handleApply() {
-    if (!user || !sparkId) return
+    if (!user || !sparkId || !spark) return
     setApplying(true)
     setError('')
+
+    // mock 번개(실제 DB row가 없는 더미 데이터)는 실 API를 호출하면 UUID 형식 오류로 항상 실패하므로
+    // 화면 상태만 직접 갱신해 신청 흐름을 시연한다.
+    if (isMock) {
+      setSpark({
+        ...spark,
+        participants: [
+          ...spark.participants,
+          {
+            id: `${spark.id}-p-self-${Date.now()}`,
+            user_id: user.id,
+            role: 'member',
+            status: 'requested',
+            profile: { id: user.id, nickname: '나', avatar_url: null, exercise_level: 'beginner' },
+          },
+        ],
+      })
+      toast.show('신청이 완료되었습니다')
+      setApplying(false)
+      return
+    }
+
     const { error: err } = await applyToSpark(sparkId, user.id)
     if (err) {
       setError('신청에 실패했어요.')
     } else {
       const { data } = await fetchSparkById(sparkId)
       if (data) setSpark(data as unknown as SparkDetail)
+      toast.show('신청이 완료되었습니다')
     }
     setApplying(false)
   }
 
+  async function handleCancelRequest() {
+    if (!myParticipation || !spark) return
+    setCanceling(true)
+    if (isMock) {
+      setSpark({ ...spark, participants: spark.participants.filter(p => p.id !== myParticipation.id) })
+    } else {
+      await cancelParticipation(myParticipation.id)
+      if (sparkId) {
+        const { data } = await fetchSparkById(sparkId)
+        if (data) setSpark(data as unknown as SparkDetail)
+      }
+    }
+    setCanceling(false)
+    setCancelConfirmOpen(false)
+    toast.show('참여 신청을 취소했어요')
+  }
+
   const myStatusLabel = () => {
-    if (isHost) return '내가 개설한 번개'
+    if (isHost) return null
     if (!myParticipation) return null
     const map: Record<string, string> = {
       requested: '승인 대기 중', approved: '참여 확정', rejected: '거절됨',
@@ -122,14 +176,14 @@ export function SparkDetailPage() {
       {/* 헤더 */}
       <div className="sticky top-0 z-20 flex items-center gap-3 bg-white px-5 py-4 shadow-sm">
         <button onClick={() => navigate(-1)}>
-          <svg className="h-6 w-6 text-[#111111]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="h-6 w-6 text-spark-dark" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
         </button>
-        <h1 className="flex-1 truncate text-base font-bold text-[#111111]">{spark.title}</h1>
+        <h1 className="flex-1 truncate text-base font-bold text-spark-dark">{spark.title}</h1>
         {isHost && (
           <button onClick={() => navigate(`/sparks/${sparkId}/manage`)}
-            className="text-sm font-medium text-[#9B8FFF]">관리</button>
+            className="text-sm font-medium text-spark-purple">관리</button>
         )}
       </div>
 
@@ -149,14 +203,14 @@ export function SparkDetailPage() {
         <div className="mx-4 -mt-5 relative z-10 rounded-2xl bg-white p-4 shadow-[0_2px_16px_rgba(0,0,0,0.12)]">
           <div className="mb-2 flex items-center gap-2">
             {spark.sport && (
-              <span className="rounded-full bg-[#EEE8FF] px-3 py-1 text-xs text-[#9B8FFF]">
+              <span className="rounded-full bg-spark-soft-purple px-3 py-1 text-xs text-spark-purple">
                 {emoji} {spark.sport.name}
               </span>
             )}
             <StatusBadge status={spark.status} />
           </div>
-          <h2 className="text-lg font-bold text-[#111111]">{spark.title}</h2>
-          <div className="mt-2 flex items-center gap-2 text-xs text-[#777777]">
+          <h2 className="text-lg font-bold text-spark-dark">{spark.title}</h2>
+          <div className="mt-2 flex items-center gap-2 text-xs text-spark-text-secondary">
             <span>📅 {formatFull(spark.scheduled_at)}</span>
           </div>
         </div>
@@ -164,7 +218,7 @@ export function SparkDetailPage() {
         <div className="mt-3 flex flex-col gap-3 px-4">
           {/* 핵심 정보 */}
           <div className="rounded-2xl bg-white p-4 shadow-[0_2px_12px_rgba(0,0,0,0.06)]">
-            <h3 className="mb-3 text-sm font-bold text-[#111111]">모임 정보</h3>
+            <h3 className="mb-3 text-sm font-bold text-spark-dark">모임 정보</h3>
             <div className="flex flex-col gap-2">
               {spark.duration_minutes && (
                 <InfoRow icon="⏱" label="진행 시간" value={`약 ${spark.duration_minutes}분`} />
@@ -173,7 +227,7 @@ export function SparkDetailPage() {
                 <InfoRow icon="📍" label="장소" value={spark.place_name} />
               )}
               {spark.address && (
-                <div className="pl-7 text-xs text-[#999999]">{spark.address}</div>
+                <div className="pl-7 text-xs text-spark-gray">{spark.address}</div>
               )}
               <InfoRow icon="👥" label="정원"
                 value={`${approvedCount}/${spark.capacity}명 참여`}
@@ -195,59 +249,53 @@ export function SparkDetailPage() {
           {/* 설명 */}
           {spark.description && (
             <div className="rounded-2xl bg-white p-4 shadow-[0_2px_12px_rgba(0,0,0,0.06)]">
-              <h3 className="mb-2 text-sm font-bold text-[#111111]">상세 설명</h3>
-              <p className="whitespace-pre-line text-sm text-[#555555]">{spark.description}</p>
+              <h3 className="mb-2 text-sm font-bold text-spark-dark">상세 설명</h3>
+              <p className="whitespace-pre-line text-sm text-spark-text-secondary">{spark.description}</p>
             </div>
           )}
 
-          {/* 호스트 */}
-          {spark.host && (
-            <div className="rounded-2xl bg-white p-4 shadow-[0_2px_12px_rgba(0,0,0,0.06)]">
-              <h3 className="mb-3 text-sm font-bold text-[#111111]">모임장</h3>
-              <div className="flex items-center gap-3">
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#EEE8FF] text-xl font-bold text-[#9B8FFF]">
-                  {spark.host.nickname[0]}
-                </div>
-                <div className="flex-1">
-                  <div className="font-bold text-[#111111]">{spark.host.nickname}</div>
-                  <div className="text-xs text-[#777777]">
-                    {levelLabel(spark.host.exercise_level)}
-                  </div>
-                </div>
-                <div className="text-right">
-                  <div className="text-xs text-[#999999]">신뢰도</div>
-                  <div className="text-lg font-bold text-[#C8FF3E]">{spark.host.trust_score}</div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* 참여자 */}
+          {/* 참여자 (모임장 포함) */}
           {spark.participants.length > 0 && (
             <div className="rounded-2xl bg-white p-4 shadow-[0_2px_12px_rgba(0,0,0,0.06)]">
-              <h3 className="mb-3 text-sm font-bold text-[#111111]">
-                참여자 <span className="text-[#9B8FFF]">{approvedCount}/{spark.capacity}</span>
+              <h3 className="mb-3 text-sm font-bold text-spark-dark">
+                참여자 <span className="text-spark-purple">{approvedCount}/{spark.capacity}</span>
               </h3>
-              <div className="flex gap-3">
+              <div className="flex flex-col gap-3">
                 {spark.participants
                   .filter(p => p.status === 'approved' || p.status === 'attended' || p.role === 'host')
-                  .map(p => (
-                    <div key={p.id} className="flex flex-col items-center gap-1">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#EEE8FF] text-sm font-bold text-[#9B8FFF]">
-                        {p.profile?.nickname?.[0] ?? '?'}
-                      </div>
-                      <span className="text-xs text-[#555555] truncate max-w-[50px]">
-                        {p.role === 'host' ? '👑' : ''}{p.profile?.nickname ?? '?'}
-                      </span>
-                    </div>
-                  ))}
+                  .sort((a, b) => (a.role === 'host' ? -1 : b.role === 'host' ? 1 : 0))
+                  .map(p => {
+                    const age = p.profile?.birth_year ? new Date().getFullYear() - p.profile.birth_year : null
+                    const gender = p.profile?.gender ? GENDER_LABEL[p.profile.gender] ?? p.profile.gender : null
+                    return (
+                      <button
+                        key={p.id}
+                        onClick={() => navigate(`/users/${p.user_id}`)}
+                        className="flex w-full items-center gap-3 text-left"
+                      >
+                        <SparkCharacter size="sm" ring={p.role === 'host' ? 'lime' : 'none'} />
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-1.5">
+                            <span className="truncate text-sm font-bold text-spark-dark">{p.profile?.nickname ?? '참여자'}</span>
+                            {p.role === 'host' && (
+                              <span className="shrink-0 rounded-full bg-spark-lime px-2 py-0.5 text-[10px] font-bold text-spark-dark">모임장</span>
+                            )}
+                          </div>
+                          <div className="truncate text-xs text-spark-text-secondary">
+                            {[age ? `${age}세` : null, gender, exerciseLevelLabel(p.profile?.exercise_level)].filter(Boolean).join(' · ')}
+                          </div>
+                        </div>
+                        <span className="text-spark-gray">›</span>
+                      </button>
+                    )
+                  })}
                 {/* 빈 슬롯 */}
                 {Array.from({ length: Math.max(0, spark.capacity - approvedCount) }).map((_, i) => (
-                  <div key={`empty-${i}`} className="flex flex-col items-center gap-1">
+                  <div key={`empty-${i}`} className="flex items-center gap-3 opacity-60">
                     <div className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-dashed border-gray-200">
                       <span className="text-lg text-gray-300">+</span>
                     </div>
-                    <span className="text-xs text-[#CCCCCC]">모집 중</span>
+                    <span className="text-xs text-spark-gray">모집 중</span>
                   </div>
                 ))}
               </div>
@@ -256,10 +304,11 @@ export function SparkDetailPage() {
         </div>
       </div>
 
-      {/* 하단 버튼 */}
-      <div className="fixed bottom-0 left-1/2 w-full max-w-[430px] -translate-x-1/2 bg-white px-5 pb-8 pt-3 shadow-[0_-2px_12px_rgba(0,0,0,0.08)]">
+      {/* 하단 버튼 — 모임장은 헤더의 '관리'로 이미 충분하므로, 보여줄 내용이 있을 때만 노출한다 */}
+      {(canApply || canReview || error || (myStatusLabel() && !canApply) || (isFull && !myParticipation && !isHost)) && (
+      <div className="fixed bottom-0 left-1/2 w-full max-w-[440px] -translate-x-1/2 bg-white px-5 pb-[max(env(safe-area-inset-bottom),32px)] pt-3 shadow-[0_-2px_12px_rgba(0,0,0,0.08)]">
         {myStatusLabel() && !canApply && (
-          <div className="mb-3 rounded-full bg-[#EEE8FF] py-2 text-center text-sm font-medium text-[#9B8FFF]">
+          <div className="mb-3 rounded-full bg-spark-soft-purple py-2 text-center text-sm font-medium text-spark-purple">
             {myStatusLabel()}
           </div>
         )}
@@ -268,36 +317,60 @@ export function SparkDetailPage() {
           <button
             onClick={handleApply}
             disabled={applying}
-            className="w-full rounded-full bg-[#C8FF3E] py-4 text-base font-bold text-[#111111] disabled:opacity-60"
+            className="w-full rounded-full bg-spark-lime py-4 text-base font-bold text-spark-dark disabled:opacity-60"
           >
             {applying ? '신청 중...' : '참여 신청하기 ⚡'}
           </button>
         )}
+        {myParticipation?.status === 'requested' && (
+          <>
+            <p className="mb-2 text-center text-xs text-spark-gray">모임장 승인 전에만 신청을 취소할 수 있어요</p>
+            <button
+              onClick={() => setCancelConfirmOpen(true)}
+              className="w-full rounded-full border border-red-200 py-4 text-base font-bold text-red-500"
+            >
+              참여 신청 취소
+            </button>
+          </>
+        )}
         {isFull && !myParticipation && !isHost && (
-          <p className="text-center text-sm text-[#999999]">정원이 마감됐어요</p>
+          <p className="text-center text-sm text-spark-gray">정원이 마감됐어요</p>
         )}
         {canReview && (
           <button
             onClick={() => navigate(`/sparks/${sparkId}/review`)}
-            className="w-full rounded-full bg-[#C8FF3E] py-4 text-base font-bold text-[#111111]"
+            className="w-full rounded-full bg-spark-lime py-4 text-base font-bold text-spark-dark"
           >
             후기 작성하기 ✍️
           </button>
         )}
       </div>
+      )}
+
+      {cancelConfirmOpen && (
+        <ConfirmModal
+          title="참여 신청을 취소할까요?"
+          confirmLabel={canceling ? '취소 중...' : '신청취소'}
+          cancelLabel="돌아가기"
+          danger
+          onConfirm={handleCancelRequest}
+          onCancel={() => setCancelConfirmOpen(false)}
+        />
+      )}
+      {toast.message && <Toast message={toast.message} onDone={toast.clear} />}
     </div>
   )
 }
 
 function StatusBadge({ status }: { status: string }) {
   const map: Record<string, { label: string; cls: string }> = {
-    recruiting: { label: '모집 중', cls: 'bg-[#C8FF3E] text-[#111111]' },
-    closed: { label: '마감', cls: 'bg-gray-200 text-[#777777]' },
-    in_progress: { label: '진행 중', cls: 'bg-[#9B8FFF] text-white' },
-    completed: { label: '완료', cls: 'bg-gray-200 text-[#777777]' },
+    recruiting: { label: '모집 중', cls: 'bg-spark-lime text-spark-dark' },
+    closed: { label: '마감', cls: 'bg-gray-200 text-spark-text-secondary' },
+    in_progress: { label: '진행 중', cls: 'bg-spark-purple text-white' },
+    completed: { label: '완료', cls: 'bg-gray-200 text-spark-text-secondary' },
     canceled: { label: '취소됨', cls: 'bg-red-100 text-red-500' },
   }
-  const s = map[status] ?? { label: status, cls: 'bg-gray-100 text-[#777777]' }
+  const s = map[status] ?? { label: status, cls: 'bg-gray-100 text-spark-text-secondary' }
   return <span className={`rounded-full px-3 py-1 text-xs font-medium ${s.cls}`}>{s.label}</span>
 }
 
@@ -309,8 +382,8 @@ function InfoRow({
   return (
     <div className="flex items-center gap-2">
       <span className="w-5 shrink-0 text-base">{icon}</span>
-      <span className="w-20 shrink-0 text-xs text-[#999999]">{label}</span>
-      <span className={`text-sm font-medium ${highlight ? 'text-[#9B8FFF]' : 'text-[#333333]'}`}>{value}</span>
+      <span className="w-20 shrink-0 text-xs text-spark-gray">{label}</span>
+      <span className={`text-sm font-medium ${highlight ? 'text-spark-purple' : 'text-[#333333]'}`}>{value}</span>
     </div>
   )
 }

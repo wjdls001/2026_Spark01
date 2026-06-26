@@ -1,4 +1,6 @@
 import { SettingsSubpageHeader } from '@/components/common/SettingsSubpageHeader'
+import { Toast } from '@/components/common/Toast'
+import { useToast } from '@/lib/utils/useToast'
 
 const ACCOUNTS = [
   { key: 'apple', label: 'Apple', connected: false },
@@ -7,6 +9,7 @@ const ACCOUNTS = [
 ]
 
 export function SocialAccountSettingsPage() {
+  const toast = useToast()
   return (
     <div className="flex min-h-dvh flex-col">
       <SettingsSubpageHeader title="소셜 계정" />
@@ -15,15 +18,16 @@ export function SocialAccountSettingsPage() {
           {ACCOUNTS.map(acc => (
             <button
               key={acc.key}
-              onClick={() => alert('소셜 계정 연동은 추후 지원될 예정이에요.')}
+              onClick={() => toast.show('소셜 계정 연동은 추후 지원될 예정이에요.')}
               className="flex w-full items-center justify-between px-4 py-3.5 text-left"
             >
-              <span className="text-sm text-[#111111]">{acc.label}</span>
-              <span className="text-xs text-[#AAAAAA]">{acc.connected ? '연결됨' : '연결 안 됨'}</span>
+              <span className="text-sm text-spark-dark">{acc.label}</span>
+              <span className="text-xs text-spark-gray">{acc.connected ? '연결됨' : '연결 안 됨'}</span>
             </button>
           ))}
         </div>
       </div>
+      {toast.message && <Toast message={toast.message} onDone={toast.clear} />}
     </div>
   )
 }

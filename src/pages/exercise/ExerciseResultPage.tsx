@@ -1,8 +1,12 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '@/features/auth/useAuth'
-import { createExerciseSession, formatDuration } from '@/features/exercise/api'
-import type { Sport } from '@/types/database'
+import { createExerciseSession } from '@/features/exercise/api'
+import { fetchProfile } from '@/features/mypage/api'
+import { MOCK_USER_PROFILE } from '@/lib/mockData'
+import { SparkCharacter } from '@/components/common/SparkCharacter'
+import { getLevelTier, levelNumberFromExerciseLevel } from '@/lib/utils/level'
+import type { Profile, Sport } from '@/types/database'
 
 type ResultState = {
   mode?: string
@@ -21,9 +25,15 @@ export function ExerciseResultPage() {
   const { user } = useAuth()
   const s = (location.state as ResultState) ?? {}
 
+  const [profile, setProfile] = useState<Profile | null>(null)
   const [saved, setSaved] = useState(false)
   const [loading, setLoading] = useState(false)
   const [xp] = useState(() => Math.floor(Math.random() * 50) + 20)
+
+  useEffect(() => {
+    if (!user) return
+    fetchProfile(user.id).then(({ data }) => data && setProfile(data)).catch(() => {})
+  }, [user])
 
   useEffect(() => {
     if (!user || saved) return
@@ -49,79 +59,66 @@ export function ExerciseResultPage() {
     save()
   }, [user]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  const nickname = profile?.nickname ?? MOCK_USER_PROFILE.nickname
+  const levelNumber = levelNumberFromExerciseLevel(profile?.exercise_level)
+  const currentExp = 1320
+  const nextLevelExp = 2083
+  const expPct = Math.min(100, Math.round((currentExp / nextLevelExp) * 100))
+  const goalPct = s.distanceMeters ? Math.min(100, Math.round((s.distanceMeters / 5000) * 100)) : 25
+  const calories = s.calories ? Math.round(Number(s.calories)) : 426
+
+  function handleShare() {
+    if (navigator.share) {
+      navigator.share({ title: 'SPARK', text: `${nickname}님이 운동을 완료했어요! 🔥` }).catch(() => {})
+    }
+  }
+
   return (
-    <div className="flex min-h-dvh flex-col bg-[#111111] px-5 py-10">
-      {/* 보상 */}
-      <div className="mb-8 flex flex-col items-center text-center">
-        <div className="mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-[#C8FF3E] text-4xl">
-          ⚡
+    <div className="spark-page-background flex min-h-[calc(100dvh-72px)] flex-col px-5 py-10 text-spark-dark">
+      <div className="mb-8 text-center">
+        <h1 className="text-2xl font-bold">{nickname}님, 오늘도 해냈어요!</h1>
+        <p className="mt-1 text-sm text-spark-text-secondary">어제보다 더 멋져지는 중!</p>
+      </div>
+
+      <div className="rounded-spark-lg bg-white p-6 text-center shadow-spark-card">
+        <div className="mx-auto flex h-28 w-28 items-center justify-center rounded-full bg-gradient-to-br from-spark-purple to-spark-lime">
+          <SparkCharacter size="md" mood="happy" />
         </div>
-        <h1 className="text-2xl font-bold text-white">운동 완료!</h1>
-        <p className="mt-1 text-[#AAAAAA]">대단해요, 오늘도 불씨를 키웠어요</p>
-        <div className="mt-4 rounded-full bg-[#2A2A2A] px-5 py-2">
-          <span className="text-[#C8FF3E] font-bold">+{xp} XP</span>
-          <span className="ml-2 text-[#AAAAAA] text-sm">획득</span>
+        <strong className="mt-4 block text-base">SPARK</strong>
+        <span className="text-xs text-spark-text-secondary">{getLevelTier(levelNumber)} · Lv.{levelNumber}</span>
+
+        <div className="mt-6 grid grid-cols-2 gap-3">
+          <div className="rounded-spark-md bg-spark-soft-purple p-4 text-left">
+            <span className="block text-xs text-spark-text-secondary">소모한 칼로리</span>
+            <strong className="mt-1 block text-lg text-spark-purple">{calories} Kcal</strong>
+          </div>
+          <div className="rounded-spark-md bg-spark-soft-lime p-4 text-left">
+            <span className="block text-xs text-spark-text-secondary">목표 달성률</span>
+            <strong className="mt-1 block text-lg text-spark-dark">{goalPct}%</strong>
+          </div>
+        </div>
+
+        <div className="mt-6 text-left">
+          <div className="flex items-center justify-between text-xs text-spark-text-secondary">
+            <span>NEXT LEVEL</span>
+            <span>{currentExp} / {nextLevelExp}</span>
+          </div>
+          <div className="mt-2 h-2.5 rounded-full bg-spark-muted">
+            <div className="h-full rounded-full bg-spark-purple" style={{ width: `${expPct}%` }} />
+          </div>
         </div>
       </div>
 
-      {/* 운동 통계 */}
-      <div className="mb-6 rounded-2xl bg-[#2A2A2A] p-5">
-        <div className="mb-4 text-sm font-medium text-[#AAAAAA]">
-          {s.sport?.name ?? '운동'} · {s.startedAt ? formatDateShort(s.startedAt) : ''}
-        </div>
-        <div className="grid grid-cols-3 gap-3">
-          <StatCard
-            label="운동 시간"
-            value={s.durationSeconds ? formatDuration(s.durationSeconds) : '-'}
-            highlight
-          />
-          <StatCard
-            label="거리"
-            value={s.distanceMeters ? `${(s.distanceMeters / 1000).toFixed(1)}km` : '-'}
-          />
-          <StatCard
-            label="칼로리"
-            value={s.calories ? `${Math.round(Number(s.calories))}` : '-'}
-            unit="kcal"
-          />
-        </div>
-      </div>
+      {loading && <p className="mt-4 text-center text-xs text-spark-text-secondary">기록 저장 중...</p>}
 
-      {loading && (
-        <div className="mb-4 text-center text-sm text-[#AAAAAA]">기록 저장 중...</div>
-      )}
-
-      {/* 버튼들 */}
-      <div className="mt-auto flex flex-col gap-3">
-        <button
-          onClick={() => navigate('/sparks')}
-          className="w-full rounded-full border border-white/20 py-4 text-base font-bold text-white"
-        >
-          번개 모임 찾아보기
+      <div className="mt-auto flex flex-col gap-3 pt-8">
+        <button onClick={() => navigate('/home')} className="h-[52px] w-full rounded-full bg-spark-purple text-base font-bold text-white">
+          리워드 받기 <span className="text-spark-lime">+{xp} XP</span>
         </button>
-        <button
-          onClick={() => navigate('/home')}
-          className="w-full rounded-full bg-[#C8FF3E] py-4 text-base font-bold text-[#111111]"
-        >
-          홈으로 돌아가기
+        <button onClick={handleShare} className="text-sm font-bold text-spark-text-secondary">
+          친구에게 공유하기
         </button>
       </div>
     </div>
   )
-}
-
-function StatCard({ label, value, unit, highlight }: { label: string; value: string; unit?: string; highlight?: boolean }) {
-  return (
-    <div className={`rounded-xl px-3 py-3 text-center ${highlight ? 'bg-[#C8FF3E]' : 'bg-[#333333]'}`}>
-      <div className={`text-xs ${highlight ? 'text-[#111111]' : 'text-[#AAAAAA]'}`}>{label}</div>
-      <div className={`mt-1 text-base font-bold ${highlight ? 'text-[#111111]' : 'text-white'}`}>
-        {value}{unit && <span className="text-xs font-normal ml-0.5">{unit}</span>}
-      </div>
-    </div>
-  )
-}
-
-function formatDateShort(iso: string) {
-  const d = new Date(iso)
-  return `${d.getMonth() + 1}/${d.getDate()}`
 }

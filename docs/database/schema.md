@@ -4,6 +4,7 @@
 > 스키마: `public`  
 > 최종 동기화: 2026-06-16  
 > 업데이트: 2026-06-17 (와이어프레임 반영 — 더미 데이터, 지도 좌표 활용)  
+> 온보딩 동기화: 2026-06-18 (실제 스키마 재확인, 전용 컬럼 추가 전 저장 규칙 명시)
 > 원본: Supabase MCP 실제 조회 결과 기준
 
 ## 더미 데이터 레이어
@@ -87,7 +88,7 @@ challenges
 | `gender`           | text        | YES      | -            | 성별                        |
 | `birth_year`       | integer     | YES      | -            | 출생연도                    |
 | `exercise_level`   | text        | NO       | `'beginner'` | 운동 레벨                   |
-| `trust_score`      | integer     | NO       | `50`         | 신뢰 점수 (0~100)           |
+| `trust_score`      | integer     | NO       | `70`         | 신뢰 점수 (0~100, 기본값 70) |
 | `preferred_sports` | text[]      | YES      | `'{}'`       | 선호 운동 종목 코드 배열    |
 | `workout_traits`   | text[]      | YES      | `'{}'`       | 운동 성향 태그 배열         |
 | `activity_area`    | text        | YES      | -            | 활동 지역                   |
@@ -548,3 +549,33 @@ alter table exercise_sessions
 - Figma 플로우 구현만을 위해 기존 컬럼을 삭제하거나 이름을 바꾸지 않는다.
 - 새 컬럼 추가는 `add column if not exists`로 작성한다.
 - 온보딩 응답을 `profiles`에 직접 저장하기 어렵다면 `onboarding_responses` 별도 테이블로 분리해도 된다. 단, MVP에서는 `profiles` 확장이 더 단순하다.
+
+### 현재 구현의 온보딩 저장 규칙 (2026-06-18)
+
+Supabase MCP로 재확인한 실제 `profiles`에는 아직 위 제안 컬럼이 없다. 따라서 원격 스키마를 변경하지 않은 현재 구현은 다음 규칙을 사용한다.
+
+| 조사값 | 현재 저장 위치/형식 |
+| --- | --- |
+| 닉네임 | `profiles.nickname`; 저장 전 실제 DB 중복 조회 |
+| 연령대 | 대표 중간 연령을 `birth_year`로 환산하고 `workout_traits`에 `연령대:{값}` 보존 |
+| 성별 | `profiles.gender` (`male` / `female` / `other`) |
+| 좋아하는 운동 | `sports` 이름 또는 코드 별칭(`러닝` → `running`)이 일치하면 해당 UUID를 `preferred_sports`에 저장 |
+| 직접 입력 선호 운동 | `workout_traits`에 `선호운동:{값}` |
+| 운동 성향 | `workout_traits`에 `#태그` |
+| 운동 목표 | `workout_traits`에 `운동목표:{값}` |
+| 자주 하는 운동 | `workout_traits`에 `자주하는운동:{값}` |
+| 주간 운동 빈도 | `workout_traits`에 `주간빈도:{값}` |
+| 평균 운동 시간 | `workout_traits`에 `평균운동시간:{값}` |
+| 계산된 운동 레벨 | `profiles.exercise_level` |
+
+전용 컬럼 migration을 적용할 때는 위 직렬화 값을 새 컬럼으로 이관하고 `src/types/database.ts`를 다시 생성해야 한다.
+
+현재 로그인 분기에서는 `profiles` 행 존재만으로 온보딩 완료를 판단하지 않는다. `workout_traits`에 `운동목표:`, `자주하는운동:`, `주간빈도:`, `평균운동시간:` 접두어가 모두 존재해야 완료로 간주한다. 기존 데모 프로필처럼 해당 마커가 없는 사용자는 사용자 조사로 이동한다.
+
+온보딩 최종 저장은 `profiles.id` 기준 upsert를 사용한다. 신규 회원은 프로필을 생성하고, 프로필 행만 미리 존재하는 데모/미완료 회원은 동일 행을 갱신한다.
+
+### 프로필 관리 UI 저장 범위 (2026-06-18)
+
+- 닉네임, 성별, 선호 운동, 운동 성향은 기존 `profiles` 컬럼에 저장한다.
+- 자기소개는 현재 실제 스키마에 대응 컬럼이 없어 UI 상태로만 제공한다. 영구 저장에는 `profiles.bio text` migration이 필요하다.
+- 직접 입력 선호 운동은 `preferred_sports`에 `선호운동:{이름}` 형식으로 저장하며 향후 사용자 종목 테이블로 정규화할 수 있다.

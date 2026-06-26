@@ -1,15 +1,64 @@
 @import "tailwindcss";
 
 @theme {
-  --color-brand-neon: #C8FF3E;
-  --color-brand-purple: #9B8FFF;
-  --color-brand-black: #111111;
-  --color-brand-dark-card: #2A2A2A;
-  --color-brand-dark-card-2: #333333;
-  --color-surface-light-purple: #EEE8FF;
-  --color-text-accent: #9B8FFF;
-  --color-text-muted: #999999;
-  --font-family-sans: 'Pretendard', 'DM Sans', system-ui, sans-serif;
+  --font-sans: "DM Sans", "Pretendard", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+
+  --color-spark-lime: #d1ff4c;
+  --color-spark-purple: #8c6cff;
+  --color-spark-lavender: #f3e7ff;
+  --color-spark-dark: #121212;
+  --color-spark-card: #1c1c1e;
+  --color-spark-white: #ffffff;
+  --color-spark-gray: #999999;
+  --color-spark-text-secondary: #666666;
+  --color-spark-text-tertiary: #999999;
+  --color-spark-bg: #f7f7f7;
+  --color-spark-soft-lime: #f3ffd8;
+  --color-spark-soft-purple: #eee8ff;
+  --color-spark-surface: #ffffff;
+  --color-spark-muted: #f5f5f5;
+  --color-spark-success: #d1ff4c;
+  --color-spark-warning: #ffb84c;
+  --color-spark-error: #ff5a5f;
+  --color-spark-info: #8c6cff;
+
+  --radius-spark-xs: 8px;
+  --radius-spark-sm: 12px;
+  --radius-spark-md: 16px;
+  --radius-spark-lg: 20px;
+  --radius-spark-xl: 24px;
+
+  --shadow-spark-card: 0 8px 24px rgba(18, 18, 18, 0.08);
+  --shadow-spark-sheet: 0 -8px 32px rgba(18, 18, 18, 0.18);
+  --shadow-spark-floating: 0 12px 32px rgba(18, 18, 18, 0.16);
+
+  --text-display: 40px;
+  --text-display--line-height: 48px;
+  --text-display--font-weight: 700;
+  --text-display-sm: 32px;
+  --text-display-sm--line-height: 38px;
+  --text-display-sm--font-weight: 700;
+  --text-title-lg: 24px;
+  --text-title-lg--line-height: 32px;
+  --text-title-lg--font-weight: 700;
+  --text-title: 20px;
+  --text-title--line-height: 28px;
+  --text-title--font-weight: 700;
+  --text-body-lg: 18px;
+  --text-body-lg--line-height: 28px;
+  --text-body-lg--font-weight: 500;
+  --text-body: 16px;
+  --text-body--line-height: 26px;
+  --text-body--font-weight: 400;
+  --text-body-sm: 14px;
+  --text-body-sm--line-height: 20px;
+  --text-body-sm--font-weight: 500;
+  --text-caption: 12px;
+  --text-caption--line-height: 18px;
+  --text-caption--font-weight: 400;
+  --text-chip: 11px;
+  --text-chip--line-height: 16px;
+  --text-chip--font-weight: 600;
 }
 
 * {
@@ -17,15 +66,65 @@
 }
 
 body {
-  background-color: #f5f5f5;
-  font-family: var(--font-family-sans);
+  min-height: 100dvh;
+  margin: 0;
+  background: linear-gradient(145deg, #ffffff 0%, #eee8ff 55%, #fff8d6 100%);
+  background-attachment: fixed;
+  font-family: var(--font-sans);
 }
 
 #root {
-  max-width: 430px;
+  width: 100%;
+  max-width: 440px;
   margin: 0 auto;
   min-height: 100dvh;
-  background-color: #ffffff;
+  background: linear-gradient(145deg, #ffffff 0%, #eee8ff 55%, #fff8d6 100%);
   position: relative;
+}
+
+#root > div {
+  min-height: 100dvh;
+  background: linear-gradient(145deg, #ffffff 0%, #eee8ff 55%, #fff8d6 100%) !important;
+}
+
+html {
+  min-height: 100%;
+  background: #eee8ff;
+  overscroll-behavior-y: none;
+  /* #root에 overflow-x:hidden을 직접 주면 overflow-y가 강제로 auto가 되어
+     #root가 의도치 않은 스크롤 컨테이너가 되고, 그 안의 모든 sticky 헤더가 깨진다.
+     가로 스크롤 방지는 html에서만 처리한다. */
   overflow-x: hidden;
+}
+
+.spark-page-background {
+  background: linear-gradient(145deg, #ffffff 0%, #eee8ff 55%, #fff8d6 100%);
+}
+
+.spark-bottom-sheet {
+  width: min(100%, 440px);
+  max-height: min(78dvh, 760px);
+  overflow-y: auto;
+  border-radius: 28px 28px 0 0;
+  background: var(--color-spark-card);
+  color: white;
+  box-shadow: var(--shadow-spark-sheet);
+  padding-bottom: max(24px, env(safe-area-inset-bottom));
+  animation: spark-sheet-up 240ms ease-out;
+}
+
+.spark-modal-panel {
+  width: min(calc(100% - 32px), 408px);
+  max-height: calc(100dvh - 32px);
+  overflow-y: auto;
+}
+
+@keyframes spark-sheet-up {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+.spark-page-background > main > div {
+  background-color: transparent !important;
+  background-image: none !important;
 }

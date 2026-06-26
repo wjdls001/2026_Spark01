@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import type { Sport } from '@/types/database'
 import { formatDuration } from '@/features/exercise/api'
+import { ConfirmModal } from '@/components/common/ConfirmModal'
 
 type SessionState = {
   mode?: string
@@ -24,6 +25,7 @@ export function ExerciseSessionPage() {
   const [editingGoal, setEditingGoal] = useState(false)
   const [goalInput, setGoalInput] = useState(String(goalValue ?? ''))
   const [currentGoalValue, setCurrentGoalValue] = useState(goalValue ?? null)
+  const [endConfirmOpen, setEndConfirmOpen] = useState(false)
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const startTimeRef = useRef<Date>(new Date())
 
@@ -39,7 +41,15 @@ export function ExerciseSessionPage() {
   }, [running, tick])
 
   function handleEnd() {
-    if (!quick && !window.confirm('운동을 종료할까요? 진행 상황이 저장되지 않아요.')) return
+    if (!quick) {
+      setEndConfirmOpen(true)
+      return
+    }
+    finishSession()
+  }
+
+  function finishSession() {
+    setEndConfirmOpen(false)
     setRunning(false)
     const endTime = new Date()
     navigate('/exercise/result', {
@@ -70,7 +80,7 @@ export function ExerciseSessionPage() {
 
   if (quick) {
     return (
-      <div className="flex min-h-dvh flex-col bg-[#111111] px-5 py-8">
+      <div className="flex min-h-dvh flex-col bg-spark-dark px-5 py-8">
         <div className="mb-6 flex items-center gap-3">
           <button onClick={() => navigate(-1)}>
             <svg className="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -81,34 +91,34 @@ export function ExerciseSessionPage() {
         </div>
 
         <div className="flex flex-col gap-4">
-          <div className="rounded-2xl bg-[#2A2A2A] px-4 py-4">
-            <label className="mb-1 block text-xs text-[#AAAAAA]">종목</label>
+          <div className="rounded-2xl bg-spark-card px-4 py-4">
+            <label className="mb-1 block text-xs text-spark-gray">종목</label>
             <p className="text-white">{sport?.name ?? '선택 안 함'}</p>
           </div>
-          <div className="rounded-2xl bg-[#2A2A2A] px-4 py-4">
-            <label className="mb-2 block text-xs text-[#AAAAAA]">운동 시간 (분)</label>
+          <div className="rounded-2xl bg-spark-card px-4 py-4">
+            <label className="mb-2 block text-xs text-spark-gray">운동 시간 (분)</label>
             <input type="number" placeholder="30"
               value={distance} onChange={e => setDistance(e.target.value)}
-              className="w-full bg-transparent text-2xl font-bold text-white outline-none placeholder:text-[#555555]" />
+              className="w-full bg-transparent text-2xl font-bold text-white outline-none placeholder:text-spark-text-secondary" />
           </div>
-          <div className="rounded-2xl bg-[#2A2A2A] px-4 py-4">
-            <label className="mb-2 block text-xs text-[#AAAAAA]">거리 (km, 선택)</label>
+          <div className="rounded-2xl bg-spark-card px-4 py-4">
+            <label className="mb-2 block text-xs text-spark-gray">거리 (km, 선택)</label>
             <input type="number" step="0.1" placeholder="0.0"
-              className="w-full bg-transparent text-2xl font-bold text-white outline-none placeholder:text-[#555555]"
+              className="w-full bg-transparent text-2xl font-bold text-white outline-none placeholder:text-spark-text-secondary"
               onChange={() => {/* stored in distance field */}}
             />
           </div>
-          <div className="rounded-2xl bg-[#2A2A2A] px-4 py-4">
-            <label className="mb-2 block text-xs text-[#AAAAAA]">칼로리 (kcal, 선택)</label>
+          <div className="rounded-2xl bg-spark-card px-4 py-4">
+            <label className="mb-2 block text-xs text-spark-gray">칼로리 (kcal, 선택)</label>
             <input type="number" placeholder="0"
               value={calories} onChange={e => setCalories(e.target.value)}
-              className="w-full bg-transparent text-2xl font-bold text-white outline-none placeholder:text-[#555555]" />
+              className="w-full bg-transparent text-2xl font-bold text-white outline-none placeholder:text-spark-text-secondary" />
           </div>
         </div>
 
         <div className="mt-auto pt-8">
           <button onClick={handleEnd}
-            className="w-full rounded-full bg-[#C8FF3E] py-4 text-base font-bold text-[#111111]">
+            className="w-full rounded-full bg-spark-lime py-4 text-base font-bold text-spark-dark">
             기록 저장하기
           </button>
         </div>
@@ -117,20 +127,20 @@ export function ExerciseSessionPage() {
   }
 
   return (
-    <div className="flex min-h-dvh flex-col items-center justify-between bg-[#111111] px-5 py-10">
+    <div className="flex min-h-dvh flex-col items-center justify-between bg-spark-dark px-5 py-10">
       <div className="w-full">
         <div className="mb-2 flex items-center justify-between">
-          <span className="rounded-full bg-[#2A2A2A] px-3 py-1 text-xs text-[#AAAAAA]">
+          <span className="rounded-full bg-spark-card px-3 py-1 text-xs text-spark-gray">
             {sport?.name ?? '운동 중'}
           </span>
           <div className="flex items-center gap-2">
             {goalPct !== null && (
-              <span className="text-sm font-bold text-[#C8FF3E]">{goalPct}%</span>
+              <span className="text-sm font-bold text-spark-lime">{goalPct}%</span>
             )}
             {goalType !== 'free' && (
               <button
                 onClick={() => { setGoalInput(String(currentGoalValue ?? '')); setEditingGoal(true) }}
-                className="rounded-full bg-[#2A2A2A] px-2 py-1 text-xs text-[#AAAAAA]"
+                className="rounded-full bg-spark-card px-2 py-1 text-xs text-spark-gray"
               >
                 목표 수정 ✏️
               </button>
@@ -138,8 +148,8 @@ export function ExerciseSessionPage() {
           </div>
         </div>
         {goalPct !== null && (
-          <div className="mb-6 h-1.5 w-full overflow-hidden rounded-full bg-[#2A2A2A]">
-            <div className="h-full rounded-full bg-[#C8FF3E] transition-all" style={{ width: `${goalPct}%` }} />
+          <div className="mb-6 h-1.5 w-full overflow-hidden rounded-full bg-spark-card">
+            <div className="h-full rounded-full bg-spark-lime transition-all" style={{ width: `${goalPct}%` }} />
           </div>
         )}
       </div>
@@ -149,26 +159,26 @@ export function ExerciseSessionPage() {
         <div className="text-6xl font-bold tracking-widest text-white">
           {formatDuration(elapsed)}
         </div>
-        <p className="mt-2 text-sm text-[#AAAAAA]">경과 시간</p>
+        <p className="mt-2 text-sm text-spark-gray">경과 시간</p>
 
         {currentGoalValue && goalType === 'time' && (
-          <p className="mt-1 text-sm text-[#9B8FFF]">목표: {currentGoalValue}분</p>
+          <p className="mt-1 text-sm text-spark-purple">목표: {currentGoalValue}분</p>
         )}
       </div>
 
       {/* 입력 */}
       <div className="mt-8 grid w-full grid-cols-2 gap-3">
-        <div className="rounded-2xl bg-[#2A2A2A] px-4 py-3">
-          <label className="block text-xs text-[#AAAAAA]">거리 (km)</label>
+        <div className="rounded-2xl bg-spark-card px-4 py-3">
+          <label className="block text-xs text-spark-gray">거리 (km)</label>
           <input type="number" step="0.1" placeholder="0.0"
             value={distance} onChange={e => setDistance(e.target.value)}
-            className="mt-1 w-full bg-transparent text-lg font-bold text-white outline-none placeholder:text-[#555555]" />
+            className="mt-1 w-full bg-transparent text-lg font-bold text-white outline-none placeholder:text-spark-text-secondary" />
         </div>
-        <div className="rounded-2xl bg-[#2A2A2A] px-4 py-3">
-          <label className="block text-xs text-[#AAAAAA]">칼로리</label>
+        <div className="rounded-2xl bg-spark-card px-4 py-3">
+          <label className="block text-xs text-spark-gray">칼로리</label>
           <input type="number" placeholder="0"
             value={calories} onChange={e => setCalories(e.target.value)}
-            className="mt-1 w-full bg-transparent text-lg font-bold text-white outline-none placeholder:text-[#555555]" />
+            className="mt-1 w-full bg-transparent text-lg font-bold text-white outline-none placeholder:text-spark-text-secondary" />
         </div>
       </div>
 
@@ -182,7 +192,7 @@ export function ExerciseSessionPage() {
         </button>
         <button
           onClick={handleEnd}
-          className="flex-1 rounded-full bg-[#C8FF3E] py-4 text-base font-bold text-[#111111]"
+          className="flex-1 rounded-full bg-spark-lime py-4 text-base font-bold text-spark-dark"
         >
           운동 종료
         </button>
@@ -190,12 +200,12 @@ export function ExerciseSessionPage() {
 
       {editingGoal && (
         <div className="fixed inset-0 z-[2000] flex items-end justify-center bg-black/50">
-          <div className="w-full max-w-[430px] rounded-t-3xl bg-[#1A1A1A] px-6 pb-8 pt-6">
+          <div className="spark-bottom-sheet px-6 pt-6">
             <h3 className="mb-3 text-base font-bold text-white">목표 수정</h3>
             <input
               type="number" value={goalInput} onChange={e => setGoalInput(e.target.value)}
               placeholder="목표값 입력"
-              className="w-full rounded-2xl bg-[#2A2A2A] px-4 py-3 text-sm text-white outline-none placeholder:text-[#666666]"
+              className="w-full rounded-2xl bg-spark-card px-4 py-3 text-sm text-white outline-none placeholder:text-spark-text-secondary"
             />
             <div className="mt-4 flex gap-2">
               <button
@@ -206,13 +216,24 @@ export function ExerciseSessionPage() {
               </button>
               <button
                 onClick={handleSaveGoal}
-                className="flex-1 rounded-full bg-[#C8FF3E] py-3 text-sm font-bold text-[#111111]"
+                className="flex-1 rounded-full bg-spark-lime py-3 text-sm font-bold text-spark-dark"
               >
                 저장
               </button>
             </div>
           </div>
         </div>
+      )}
+
+      {endConfirmOpen && (
+        <ConfirmModal
+          title="운동을 종료할까요?"
+          message="진행 상황이 저장되지 않아요."
+          confirmLabel="종료"
+          danger
+          onConfirm={finishSession}
+          onCancel={() => setEndConfirmOpen(false)}
+        />
       )}
     </div>
   )

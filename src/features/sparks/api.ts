@@ -29,7 +29,7 @@ export async function fetchSparkById(sparkId: string) {
       sport:sports(id, code, name),
       participants:spark_participants(
         id, user_id, role, status, requested_at, approved_at,
-        profile:profiles!user_id(id, nickname, avatar_url, exercise_level)
+        profile:profiles!user_id(id, nickname, avatar_url, exercise_level, gender, birth_year)
       )
     `)
     .eq('id', sparkId)
@@ -42,6 +42,14 @@ export async function createSpark(data: SparkInsert) {
 
 export async function updateSparkStatus(sparkId: string, status: Database['public']['Tables']['sparks']['Row']['status']) {
   return supabase.from('sparks').update({ status }).eq('id', sparkId)
+}
+
+export async function updateSpark(sparkId: string, data: Partial<Database['public']['Tables']['sparks']['Update']>) {
+  return supabase.from('sparks').update(data).eq('id', sparkId)
+}
+
+export async function deleteSpark(sparkId: string) {
+  return supabase.from('sparks').delete().eq('id', sparkId)
 }
 
 export async function applyToSpark(sparkId: string, userId: string) {
@@ -61,6 +69,20 @@ export async function updateParticipantStatus(
   if (status === 'approved') updates.approved_at = new Date().toISOString()
   if (status === 'canceled') updates.canceled_at = new Date().toISOString()
   return supabase.from('spark_participants').update(updates as Database['public']['Tables']['spark_participants']['Update']).eq('id', participantId)
+}
+
+export async function cancelParticipation(participantId: string) {
+  return updateParticipantStatus(participantId, 'canceled')
+}
+
+export async function reportUser(data: { reporter_id: string; target_user_id: string; spark_id?: string; reason: string; description?: string }) {
+  return supabase.from('reports').insert({
+    reporter_id: data.reporter_id,
+    target_user_id: data.target_user_id,
+    spark_id: data.spark_id ?? null,
+    reason: data.reason,
+    description: data.description ?? null,
+  })
 }
 
 export async function fetchMyParticipations(userId: string) {

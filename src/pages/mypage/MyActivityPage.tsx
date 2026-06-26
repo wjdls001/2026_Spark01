@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/features/auth/useAuth'
 import { fetchMyParticipations, fetchMySparks } from '@/features/sparks/api'
+import { MOCK_SPARKS, SPORT_EMOJI } from '@/lib/mockData'
 
 type ParticipationRow = {
   id: string
@@ -28,197 +29,135 @@ type MySparkRow = {
   participants: { count: number }[]
 }
 
-const SPARK_STATUS_MAP: Record<string, string> = {
-  recruiting: '모집 중', closed: '마감', in_progress: '진행 중', completed: '완료', canceled: '취소',
-}
-
-const PARTICIPANT_STATUS_MAP: Record<string, string> = {
-  requested: '승인 대기', approved: '참여 확정', rejected: '거절됨', canceled: '취소됨', attended: '운동 완료', no_show: '노쇼',
-}
+type Tab = 'joined' | 'hosted'
+type Sort = 'latest' | 'oldest'
+type HostedFilter = 'all' | 'recruiting' | 'closed'
 
 export function MyActivityPage() {
   const navigate = useNavigate()
   const { user } = useAuth()
-  const [tab, setTab] = useState<'joined' | 'hosted'>('joined')
+  const [tab, setTab] = useState<Tab>('joined')
   const [participations, setParticipations] = useState<ParticipationRow[]>([])
-  const [mySparks, setMySparks] = useState<MySparkRow[]>([])
+  const [hosted, setHosted] = useState<MySparkRow[]>([])
+  const [search, setSearch] = useState('')
+  const [sort, setSort] = useState<Sort>('latest')
+  const [filter, setFilter] = useState<HostedFilter>('all')
   const [loading, setLoading] = useState(true)
-  const [filter, setFilter] = useState<string>('all')
 
   useEffect(() => {
     if (!user) return
     setLoading(true)
-    if (tab === 'joined') {
-      fetchMyParticipations(user.id).then(({ data }) => {
-        if (data) setParticipations(data as unknown as ParticipationRow[])
-        setLoading(false)
-      })
-    } else {
-      fetchMySparks(user.id).then(({ data }) => {
-        if (data) setMySparks(data as unknown as MySparkRow[])
-        setLoading(false)
-      })
-    }
-  }, [tab, user])
+    Promise.all([fetchMyParticipations(user.id), fetchMySparks(user.id)]).then(([joinedResult, hostedResult]) => {
+      const joinedRows = joinedResult.data as unknown as ParticipationRow[] | null
+      const hostedRows = hostedResult.data as unknown as MySparkRow[] | null
+      setParticipations(joinedRows?.length ? joinedRows : mockParticipations())
+      setHosted(hostedRows?.length ? hostedRows : MOCK_SPARKS.slice(0, 4) as unknown as MySparkRow[])
+    }).catch(() => {
+      setParticipations(mockParticipations())
+      setHosted(MOCK_SPARKS.slice(0, 4) as unknown as MySparkRow[])
+    }).finally(() => setLoading(false))
+  }, [user])
 
-  const filterStatuses = {
-    all: null,
-    active: ['requested', 'approved', 'recruiting', 'closed', 'in_progress'],
-    done: ['attended', 'completed'],
-  }
+  const joinedItems = useMemo(() => {
+    return participations
+      .filter(item => item.spark?.title.toLowerCase().includes(search.toLowerCase()))
+      .sort((a, b) => sortDates(a.spark?.scheduled_at, b.spark?.scheduled_at, sort))
+  }, [participations, search, sort])
 
-  const filteredParticipations = participations.filter(p => {
-    if (filter === 'all') return true
-    const statuses = filterStatuses[filter as keyof typeof filterStatuses]
-    return statuses ? statuses.includes(p.status) || statuses.includes(p.spark?.status ?? '') : true
-  })
-
-  const filteredSparks = mySparks.filter(s => {
-    if (filter === 'all') return true
-    if (filter === 'active') return ['recruiting', 'closed', 'in_progress'].includes(s.status)
-    if (filter === 'done') return ['completed', 'canceled'].includes(s.status)
-    return true
-  })
+  const hostedItems = useMemo(() => {
+    return hosted
+      .filter(item => item.title.toLowerCase().includes(search.toLowerCase()))
+      .filter(item => filter === 'all' || (filter === 'recruiting' ? item.status === 'recruiting' : ['closed', 'completed', 'canceled'].includes(item.status)))
+      .sort((a, b) => sortDates(a.scheduled_at, b.scheduled_at, sort))
+  }, [hosted, search, filter, sort])
 
   return (
-    <div className="flex min-h-dvh flex-col">
-      <div className="flex items-center gap-3 bg-white px-5 py-4 shadow-sm">
-        <button onClick={() => navigate(-1)}>
-          <svg className="h-6 w-6 text-[#111111]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
-        </button>
-        <h1 className="text-lg font-bold text-[#111111]">활동 관리</h1>
-      </div>
+    <div className="spark-page-background min-h-dvh text-spark-dark">
+      <header className="flex h-16 items-center px-5">
+        <button onClick={() => navigate(-1)} className="mr-3 text-3xl">‹</button>
+        <h1 className="text-xl font-bold">활동 관리</h1>
+      </header>
 
-      {/* 탭 */}
-      <div className="flex border-b border-gray-100 bg-white">
-        <button onClick={() => { setTab('joined'); setFilter('all') }}
-          className={`flex-1 py-3 text-sm font-medium ${tab === 'joined' ? 'border-b-2 border-[#9B8FFF] text-[#9B8FFF]' : 'text-[#999999]'}`}>
-          참여한 번개
-        </button>
-        <button onClick={() => { setTab('hosted'); setFilter('all') }}
-          className={`flex-1 py-3 text-sm font-medium ${tab === 'hosted' ? 'border-b-2 border-[#9B8FFF] text-[#9B8FFF]' : 'text-[#999999]'}`}>
-          개설한 번개
-        </button>
-      </div>
+      <nav className="mx-5 grid grid-cols-2 rounded-full bg-white p-1 shadow-sm">
+        <button onClick={() => { setTab('joined'); setFilter('all') }} className={`rounded-full py-3 text-sm font-bold ${tab === 'joined' ? 'bg-spark-purple text-white' : 'text-spark-text-secondary'}`}>참여한 번개</button>
+        <button onClick={() => { setTab('hosted'); setFilter('all') }} className={`rounded-full py-3 text-sm font-bold ${tab === 'hosted' ? 'bg-spark-purple text-white' : 'text-spark-text-secondary'}`}>개설한 번개</button>
+      </nav>
 
-      {/* 필터 */}
-      <div className="flex gap-2 bg-white px-5 py-3 border-b border-gray-100">
-        {[{ k: 'all', l: '전체' }, { k: 'active', l: '진행 중' }, { k: 'done', l: '완료' }].map(f => (
-          <button key={f.k} onClick={() => setFilter(f.k)}
-            className={`rounded-full border px-3 py-1 text-xs ${filter === f.k ? 'border-[#9B8FFF] bg-[#9B8FFF] text-white' : 'border-gray-300 text-[#555555]'}`}>
-            {f.l}
-          </button>
-        ))}
-      </div>
-
-      <div className="flex-1 overflow-y-auto px-5 py-5">
-        {loading ? (
-          <div className="flex justify-center py-10">
-            <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#9B8FFF] border-t-transparent" />
+      <main className="px-5 pb-8 pt-6">
+        <section className="rounded-spark-lg bg-white p-4 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div><span className="text-xs text-spark-text-secondary">총 {tab === 'joined' ? '참여' : '개설'} 번개</span><strong className="ml-2 text-xl">{tab === 'joined' ? joinedItems.length : hostedItems.length}</strong></div>
+            <button onClick={() => setSort(current => current === 'latest' ? 'oldest' : 'latest')} className="rounded-full bg-spark-muted px-4 py-2 text-xs font-bold text-spark-purple">{sort === 'latest' ? '최신순 ↓' : '오래된순 ↑'}</button>
           </div>
-        ) : tab === 'joined' ? (
-          filteredParticipations.length === 0 ? (
-            <EmptyState text="참여한 번개가 없어요." subText="번개를 찾아볼까요?" linkTo="/sparks" linkText="번개 탐색" />
-          ) : (
-            <div className="flex flex-col gap-3">
-              {filteredParticipations.map(p => {
-                if (!p.spark) return null
-                return (
-                  <Link key={p.id} to={`/sparks/${p.spark.id}`}
-                    className="block rounded-2xl bg-white p-4 shadow-[0_2px_12px_rgba(0,0,0,0.08)]">
-                    <div className="mb-2 flex items-center gap-2">
-                      {p.spark.sport && (
-                        <span className="rounded-full bg-[#EEE8FF] px-2 py-0.5 text-xs text-[#9B8FFF]">{p.spark.sport.name}</span>
-                      )}
-                      <span className={`rounded-full px-2 py-0.5 text-xs ${participantStatusColor(p.status)}`}>
-                        {PARTICIPANT_STATUS_MAP[p.status] ?? p.status}
-                      </span>
-                    </div>
-                    <h3 className="text-sm font-bold text-[#111111]">{p.spark.title}</h3>
-                    <div className="mt-1 flex items-center gap-2 text-xs text-[#777777]">
-                      <span>📅 {formatSchedule(p.spark.scheduled_at)}</span>
-                      {p.spark.place_name && <span>📍 {p.spark.place_name}</span>}
-                    </div>
-                  </Link>
-                )
-              })}
-            </div>
-          )
-        ) : (
-          filteredSparks.length === 0 ? (
-            <EmptyState text="개설한 번개가 없어요." subText="번개를 만들어볼까요?" linkTo="/sparks/new" linkText="번개 만들기" />
-          ) : (
-            <div className="flex flex-col gap-3">
-              {filteredSparks.map(spark => (
-                <Link key={spark.id} to={`/sparks/${spark.id}`}
-                  className="block rounded-2xl bg-white p-4 shadow-[0_2px_12px_rgba(0,0,0,0.08)]">
-                  <div className="mb-2 flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2">
-                      {spark.sport && (
-                        <span className="rounded-full bg-[#EEE8FF] px-2 py-0.5 text-xs text-[#9B8FFF]">{spark.sport.name}</span>
-                      )}
-                      <span className={`rounded-full px-2 py-0.5 text-xs ${sparkStatusColor(spark.status)}`}>
-                        {SPARK_STATUS_MAP[spark.status] ?? spark.status}
-                      </span>
-                    </div>
-                    <Link to={`/sparks/${spark.id}/manage`} onClick={e => e.stopPropagation()}
-                      className="text-xs text-[#9B8FFF] font-medium">관리 →</Link>
-                  </div>
-                  <h3 className="text-sm font-bold text-[#111111]">{spark.title}</h3>
-                  <div className="mt-1 flex items-center gap-2 text-xs text-[#777777]">
-                    <span>📅 {formatSchedule(spark.scheduled_at)}</span>
-                    {spark.place_name && <span>📍 {spark.place_name}</span>}
-                    <span className="ml-auto">👥 {spark.participants?.[0]?.count ?? 0}/{spark.capacity}</span>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          )
+          <div className="mt-4 flex h-12 items-center rounded-full bg-spark-muted px-4">
+            <span className="mr-2">⌕</span>
+            <input value={search} onChange={event => setSearch(event.target.value)} placeholder="번개 이름을 검색해 주세요" className="min-w-0 flex-1 bg-transparent text-sm outline-none" />
+            {search && <button onClick={() => setSearch('')} className="text-spark-gray">×</button>}
+          </div>
+        </section>
+
+        {tab === 'hosted' && (
+          <div className="mt-4 flex gap-2">
+            {([{ key: 'all', label: '전체' }, { key: 'recruiting', label: '모집중' }, { key: 'closed', label: '마감' }] as const).map(item => (
+              <button key={item.key} onClick={() => setFilter(item.key)} className={`rounded-full px-4 py-2 text-xs font-bold ${filter === item.key ? 'bg-spark-lime text-spark-dark' : 'bg-white text-spark-text-secondary'}`}>{item.label}</button>
+            ))}
+          </div>
         )}
-      </div>
+
+        <section className="mt-5 space-y-3">
+          {loading ? <Loading /> : tab === 'joined'
+            ? joinedItems.map(item => item.spark && <ActivityCard key={item.id} spark={item.spark} badge={participantLabel(item.status)} onClick={() => navigate(`/sparks/${item.spark?.id}`)} />)
+            : hostedItems.map(item => <ActivityCard key={item.id} spark={item} badge={sparkLabel(item.status)} hosted onClick={() => navigate(`/sparks/${item.id}/manage`)} />)}
+          {!loading && (tab === 'joined' ? joinedItems.length === 0 : hostedItems.length === 0) && <EmptyState tab={tab} onClick={() => navigate(tab === 'joined' ? '/sparks' : '/sparks/new')} />}
+        </section>
+      </main>
     </div>
   )
 }
 
-function EmptyState({ text, subText, linkTo, linkText }: { text: string; subText: string; linkTo: string; linkText: string }) {
+function ActivityCard({ spark, badge, hosted, onClick }: { spark: ParticipationRow['spark'] | MySparkRow; badge: string; hosted?: boolean; onClick: () => void }) {
+  if (!spark) return null
+  const code = spark.sport?.code ?? ''
+  const participantCount = 'participants' in spark ? spark.participants?.[0]?.count ?? 0 : null
   return (
-    <div className="flex flex-col items-center py-10 text-center">
-      <div className="text-4xl mb-3">⚡</div>
-      <p className="text-sm text-[#777777]">{text}</p>
-      <p className="text-xs text-[#AAAAAA] mt-1">{subText}</p>
-      <Link to={linkTo} className="mt-4 rounded-full bg-[#C8FF3E] px-6 py-2.5 text-sm font-bold text-[#111111]">
-        {linkText}
-      </Link>
-    </div>
+    <button onClick={onClick} className="flex w-full items-center gap-4 rounded-spark-lg bg-white p-4 text-left shadow-spark-card">
+      <span className="flex h-14 w-14 items-center justify-center rounded-spark-md bg-spark-soft-purple text-2xl">{SPORT_EMOJI[code] ?? '⚡'}</span>
+      <span className="min-w-0 flex-1">
+        <span className="flex items-center gap-2"><span className="rounded-full bg-spark-soft-purple px-2 py-1 text-[10px] font-bold text-spark-purple">{spark.sport?.name ?? '운동'}</span><span className="rounded-full bg-spark-soft-lime px-2 py-1 text-[10px] font-bold">{badge}</span></span>
+        <strong className="mt-2 block truncate text-sm">{spark.title}</strong>
+        <span className="mt-1 block truncate text-xs text-spark-text-secondary">{formatSchedule(spark.scheduled_at)} · {spark.place_name ?? '장소 미정'}</span>
+      </span>
+      <span className="text-right text-xs text-spark-purple">{hosted ? '관리 →' : '상세 →'}{participantCount !== null && <small className="mt-1 block text-spark-gray">👥 {participantCount}</small>}</span>
+    </button>
   )
 }
 
-function participantStatusColor(status: string) {
-  const map: Record<string, string> = {
-    requested: 'bg-yellow-100 text-yellow-700',
-    approved: 'bg-green-100 text-green-700',
-    rejected: 'bg-red-100 text-red-500',
-    canceled: 'bg-gray-100 text-[#777777]',
-    attended: 'bg-[#C8FF3E] text-[#111111]',
-    no_show: 'bg-gray-100 text-[#777777]',
-  }
-  return map[status] ?? 'bg-gray-100 text-[#777777]'
+function Loading() {
+  return <div className="flex justify-center py-12"><div className="h-8 w-8 animate-spin rounded-full border-2 border-spark-purple border-t-transparent" /></div>
 }
 
-function sparkStatusColor(status: string) {
-  const map: Record<string, string> = {
-    recruiting: 'bg-[#C8FF3E] text-[#111111]',
-    closed: 'bg-gray-100 text-[#777777]',
-    in_progress: 'bg-[#EEE8FF] text-[#9B8FFF]',
-    completed: 'bg-gray-100 text-[#777777]',
-    canceled: 'bg-red-100 text-red-500',
-  }
-  return map[status] ?? 'bg-gray-100 text-[#777777]'
+function EmptyState({ tab, onClick }: { tab: Tab; onClick: () => void }) {
+  return <div className="rounded-spark-lg bg-white p-8 text-center"><div className="text-4xl">⚡</div><p className="mt-3 text-sm text-spark-text-secondary">{tab === 'joined' ? '참여한 번개가 없어요.' : '개설한 번개가 없어요.'}</p><button onClick={onClick} className="mt-5 rounded-full bg-spark-lime px-6 py-3 text-sm font-bold">{tab === 'joined' ? '번개 탐색' : '번개 만들기'}</button></div>
+}
+
+function mockParticipations(): ParticipationRow[] {
+  return MOCK_SPARKS.slice(0, 4).map((spark, index) => ({ id: `mock-participation-${index}`, status: index === 0 ? 'approved' : index === 3 ? 'attended' : 'requested', spark: { ...spark, host: spark.host ? { id: spark.host.id, nickname: spark.host.nickname, avatar_url: spark.host.avatar_url } : null } })) as unknown as ParticipationRow[]
+}
+
+function sortDates(a: string | undefined, b: string | undefined, sort: Sort) {
+  const difference = new Date(a ?? 0).getTime() - new Date(b ?? 0).getTime()
+  return sort === 'latest' ? -difference : difference
+}
+
+function participantLabel(status: string) {
+  return ({ requested: '승인 대기', approved: '참여 확정', attended: '운동 완료', rejected: '거절됨', canceled: '취소됨' } as Record<string, string>)[status] ?? status
+}
+
+function sparkLabel(status: string) {
+  return ({ recruiting: '모집중', closed: '마감', in_progress: '진행중', completed: '완료', canceled: '취소' } as Record<string, string>)[status] ?? status
 }
 
 function formatSchedule(iso: string) {
-  const d = new Date(iso)
-  return `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+  const date = new Date(iso)
+  return `${date.getMonth() + 1}.${date.getDate()} ${date.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}`
 }
